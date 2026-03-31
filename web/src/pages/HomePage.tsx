@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { getClient, disconnectClient } from "../hooks/useChain";
 import { useChainStore } from "../store/chainStore";
 import { stack_template } from "@polkadot-api/descriptors";
@@ -18,16 +18,17 @@ export default function HomePage() {
   const [error, setError] = useState<string | null>(null);
   const [urlInput, setUrlInput] = useState(wsUrl);
   const [connecting, setConnecting] = useState(false);
+  const connectIdRef = useRef(0);
 
   const connect = useCallback(
     async (url: string) => {
+      const id = ++connectIdRef.current;
       setConnecting(true);
       setError(null);
       setConnected(false);
       setChainName("...");
       setPallets({ templatePallet: null, revive: null });
 
-      // Disconnect previous client if URL changed
       disconnectClient();
 
       try {
@@ -38,6 +39,10 @@ export default function HomePage() {
             setTimeout(() => reject(new Error("Connection timed out")), 10000)
           ),
         ]);
+
+        // Bail if a newer connect call was started (React strict mode)
+        if (connectIdRef.current !== id) return;
+
         setChainName(chain.name);
         setConnected(true);
 
@@ -54,26 +59,29 @@ export default function HomePage() {
 
         try {
           const api = client.getTypedApi(stack_template);
-          // Check if Revive pallet exists by querying its deposit amount constant
           await api.constants.Revive.DepositPerByte();
           detected.revive = true;
         } catch {
           detected.revive = false;
         }
 
+        if (connectIdRef.current !== id) return;
         setPallets(detected);
       } catch (e) {
+        if (connectIdRef.current !== id) return;
         setError(`Could not connect to ${url}. Is the chain running?`);
         setPallets({ templatePallet: false, revive: false });
         console.error(e);
       } finally {
-        setConnecting(false);
+        if (connectIdRef.current === id) {
+          setConnecting(false);
+        }
       }
     },
     [setConnected, setPallets]
   );
 
-  // Connect on mount (skip if already connected to the same URL)
+  // Connect on mount (skip if already connected)
   useEffect(() => {
     if (!connected) {
       connect(wsUrl);
