@@ -1,7 +1,20 @@
 import { useEffect, useCallback, useRef } from "react";
 import { getClient, disconnectClient } from "./useChain";
 import { useChainStore } from "../store/chainStore";
-import { stack_template } from "@polkadot-api/descriptors";
+
+let stackTemplateDescriptorPromise: Promise<
+  (typeof import("@polkadot-api/descriptors"))["stack_template"]
+> | null = null;
+
+async function getStackTemplateDescriptor() {
+  if (!stackTemplateDescriptorPromise) {
+    stackTemplateDescriptorPromise = import("@polkadot-api/descriptors").then(
+      ({ stack_template }) => stack_template
+    );
+  }
+
+  return stackTemplateDescriptorPromise;
+}
 
 export function useConnection() {
   const {
@@ -23,6 +36,7 @@ export function useConnection() {
 
       try {
         const client = getClient(url);
+        const descriptor = await getStackTemplateDescriptor();
         const chain = await Promise.race([
           client.getChainSpecData(),
           new Promise<never>((_, reject) =>
@@ -38,7 +52,7 @@ export function useConnection() {
         const detected = { templatePallet: false, revive: false };
 
         try {
-          const api = client.getTypedApi(stack_template);
+          const api = client.getTypedApi(descriptor);
           await api.query.TemplatePallet.Claims.getEntries();
           detected.templatePallet = true;
         } catch {
@@ -46,7 +60,7 @@ export function useConnection() {
         }
 
         try {
-          const api = client.getTypedApi(stack_template);
+          const api = client.getTypedApi(descriptor);
           await api.constants.Revive.DepositPerByte();
           detected.revive = true;
         } catch {

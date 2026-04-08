@@ -1,8 +1,6 @@
 mod xcm_config;
 
-use polkadot_sdk::{staging_parachain_info as parachain_info, staging_xcm as xcm, *};
-#[cfg(not(feature = "runtime-benchmarks"))]
-use polkadot_sdk::{staging_xcm_builder as xcm_builder, staging_xcm_executor as xcm_executor};
+use polkadot_sdk::{staging_xcm as xcm, *};
 
 use cumulus_pallet_parachain_system::RelayNumberMonotonicallyIncreases;
 use cumulus_primitives_core::{AggregateMessageOrigin, ParaId};
@@ -26,7 +24,7 @@ use polkadot_runtime_common::{
     xcm_sender::NoPriceForMessageDelivery, BlockHashCount, SlowAdjustingFeeUpdate,
 };
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
-use sp_runtime::{FixedU128, Perbill};
+use sp_runtime::Perbill;
 use sp_version::RuntimeVersion;
 use xcm::latest::prelude::BodyId;
 
