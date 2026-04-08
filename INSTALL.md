@@ -357,6 +357,19 @@ The `[patch.crates-io]` section in `Cargo.toml` pins `pallet-revive-proc-macro` 
 
 Each contract directory has a `tsconfig.json` that avoids the TypeScript 7.0 deprecation. Make sure you're using the `tsconfig.json` in the contract directory, not a global one.
 
+### Statement Store RPCs not available
+
+In polkadot-sdk stable2512-3, `--enable-statement-store` is silently ignored in dev mode (`--dev` or `--dev-block-time`). The dev code path returns early before the statement store configuration is consumed. Use `./scripts/start-zombienet-all.sh` instead — it runs a relay chain + collator where the statement store works correctly.
+
+### Parachain stalls at block 0 on Zombienet
+
+All binaries (`polkadot`, `polkadot-omni-node`, `eth-rpc`) must be from the same SDK release. A version mismatch (e.g., `polkadot` 1.15.0 with `polkadot-omni-node` 1.21.3) causes the collator to fail to advertise collations to relay chain validators. Verify with:
+```bash
+polkadot --version
+polkadot-omni-node --version
+# Both should show 1.21.3
+```
+
 ### Frontend builds but uses stale chain types
 
 The frontend now fails fast if PAPI code generation fails. Regenerate the metadata and descriptors against a running chain:

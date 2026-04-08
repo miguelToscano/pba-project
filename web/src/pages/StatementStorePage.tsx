@@ -123,8 +123,9 @@ export default function StatementStorePage() {
 					<p className="text-gray-500 text-sm">
 						The connected node does not expose Statement Store RPCs. In
 						polkadot-sdk stable2512-3, the statement store is only available in
-						non-dev mode (requires a relay chain via Zombienet). See{" "}
-						<code className="text-gray-400">statement-store.md</code> for details.
+						non-dev mode (requires a relay chain via Zombienet). Use{" "}
+						<code className="text-gray-400">./scripts/start-zombienet-all.sh</code>{" "}
+						to start a full environment with Statement Store support.
 					</p>
 				</div>
 			</div>
