@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -e
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -17,7 +17,7 @@ if curl -s -o /dev/null http://127.0.0.1:9944 2>/dev/null; then
     npm run codegen
 else
     echo "WARNING: Node not running at ws://127.0.0.1:9944"
-    echo "  Start the node first: ./scripts/start-dev.sh"
+    echo "  Start a chain first with ./scripts/start-dev.sh or ./scripts/start-local.sh"
     echo "  PAPI descriptors may be stale or missing."
     echo ""
 fi

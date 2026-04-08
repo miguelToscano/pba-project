@@ -61,11 +61,10 @@ A Rust CLI tool using [subxt](https://github.com/parity-tech/subxt) and [alloy](
 
 ### Deployment
 
-- [`scripts/start-all.sh`](scripts/start-all.sh) - Full working local stack via Zombienet: relay chain, collator, Statement Store, contracts, and frontend
+- [`scripts/start-all.sh`](scripts/start-all.sh) - Full working local stack: relay chain, collator, Statement Store, contracts, and frontend
 - [`scripts/start-dev.sh`](scripts/start-dev.sh) - Lightweight solo-node runtime/pallet loop (no Statement Store on stable2512-3)
-- [`scripts/start-dev-with-contracts.sh`](scripts/start-dev-with-contracts.sh) - Lightweight solo-node contracts loop (no Statement Store on stable2512-3)
 - [`scripts/start-local.sh`](scripts/start-local.sh) - Relay-backed Zombienet network only
-- [`scripts/start-zombienet-all.sh`](scripts/start-zombienet-all.sh) - Explicit full-feature alias for `start-all.sh`
+- [`scripts/start-frontend.sh`](scripts/start-frontend.sh) - Frontend dev server for an already-running chain
 - [`scripts/deploy-paseo.sh`](scripts/deploy-paseo.sh) - Deploy contracts to Polkadot TestNet
 - [`scripts/deploy-frontend.sh`](scripts/deploy-frontend.sh) - Deploy frontend to IPFS
 - [`.github/workflows/deploy-frontend.yml`](.github/workflows/deploy-frontend.yml) - Optional manual CI deploy to IPFS + DotNS
@@ -107,9 +106,6 @@ Or run components individually:
 # Start just the lightweight solo dev chain
 ./scripts/start-dev.sh
 
-# Start the lightweight solo dev chain + compile and deploy contracts
-./scripts/start-dev-with-contracts.sh
-
 # Start a relay-backed local network only
 ./scripts/start-local.sh
 
@@ -124,7 +120,7 @@ cargo run -p stack-cli -- chain statement-submit --file ./README.md --signer ali
 cargo run -p stack-cli -- chain statement-dump
 ```
 
-The solo-node dev scripts (`start-dev.sh` and `start-dev-with-contracts.sh`) generate a local chain spec, then start a single local omni-node on `ws://127.0.0.1:9944` for quick runtime/contract iteration. On stable2512-3 they do **not** expose Statement Store RPCs because omni-node dev mode drops the statement-store wiring. Use `./scripts/start-all.sh`, `./scripts/start-zombienet-all.sh`, or `./scripts/start-local.sh` when you specifically need the relay-backed Statement Store example.
+The solo-node dev script (`start-dev.sh`) generates a local chain spec, then starts a single local omni-node on `ws://127.0.0.1:9944` for the fastest runtime/pallet loop. On stable2512-3 it does **not** expose Statement Store RPCs because omni-node dev mode drops the statement-store wiring. Use `./scripts/start-all.sh` when you want the full local stack, or `./scripts/start-local.sh` when you specifically need the relay-backed network.
 
 The frontend keeps `deployments.json` and `web/src/config/deployments.ts` as checked-in stubs. Deploy scripts update both files automatically after a successful contract deployment.
 
@@ -133,7 +129,13 @@ If you want explicit build-time defaults for hosted frontends, copy [`web/.env.e
 ### Deploy contracts
 
 ```bash
-# Compile and deploy to local node
+# Recommended full local path
+./scripts/start-all.sh
+
+# Or, against a manually started local node:
+# 1) ./scripts/start-dev.sh
+# 2) eth-rpc --node-rpc-url ws://127.0.0.1:9944 --rpc-cors all
+# 3) deploy the contracts
 cd contracts/evm && npm install && npm run deploy:local
 cd contracts/pvm && npm install && npm run deploy:local
 

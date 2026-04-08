@@ -32,7 +32,7 @@ Statement Store is an omni-node feature for validating, storing, and gossiping s
 
 The full-feature local scripts generate a local relay-chain-backed spec and then start a fixed-port Zombienet network (2 relay validators + 1 collator). They wait until `statement_submit` appears in `rpc_methods`, so the Statement Store RPCs are actually present before contract deployment or frontend startup continues.
 
-The lighter solo-node scripts (`start-dev.sh`, `start-dev-with-contracts.sh`, and Docker Compose) use omni-node dev mode for a faster iteration loop. On `polkadot-sdk stable2512-3`, that dev path does not wire up Statement Store even if `--enable-statement-store` is passed.
+The lighter solo-node tools (`start-dev.sh` and Docker Compose) use omni-node dev mode for a faster iteration loop. On `polkadot-sdk stable2512-3`, that dev path does not wire up Statement Store even if `--enable-statement-store` is passed.
 
 The current template integration is active in all three local entry points:
 

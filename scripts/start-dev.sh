@@ -23,6 +23,6 @@ echo "  RPC endpoint: ws://127.0.0.1:9944"
 echo ""
 echo "  This is the lightweight solo-node path for pallet/runtime work."
 echo "  Statement Store is not available here on stable2512-3."
-echo "  Use start-all.sh (or start-zombienet-all.sh) for the full relay-backed stack."
+echo "  Use start-all.sh for the full stack, or start-local.sh for just the relay-backed network."
 echo ""
 run_local_node_foreground

@@ -124,9 +124,10 @@ export default function StatementStorePage() {
 							The connected node does not expose Statement Store RPCs. In
 							polkadot-sdk stable2512-3, the statement store is only available in
 							the relay-backed path. Use{" "}
-							<code className="text-gray-400">./scripts/start-all.sh</code> (or{" "}
-							<code className="text-gray-400">./scripts/start-zombienet-all.sh</code>){" "}
-							to start a full environment with Statement Store support.
+							<code className="text-gray-400">./scripts/start-all.sh</code> to
+							start the full environment, or{" "}
+							<code className="text-gray-400">./scripts/start-local.sh</code> for
+							just the relay-backed network.
 						</p>
 					</div>
 				</div>

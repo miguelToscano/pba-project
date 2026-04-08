@@ -87,19 +87,16 @@ The quickest way to get everything running (node, contracts, and frontend):
 ./scripts/start-all.sh
 ```
 
-Or start the node and deploy contracts without the frontend:
-
-```bash
-./scripts/start-dev-with-contracts.sh
-```
-
 Or deploy contracts manually against a running node:
 
 ```bash
 # Start node (terminal 1)
 ./scripts/start-dev.sh
 
-# Deploy contracts (terminal 2)
+# Start eth-rpc against the local node (terminal 2)
+eth-rpc --node-rpc-url ws://127.0.0.1:9944 --rpc-cors all
+
+# Deploy contracts (terminal 3)
 cd contracts/evm && npm install && npm run deploy:local
 cd contracts/pvm && npm install && npm run deploy:local
 ```
@@ -138,7 +135,7 @@ This builds the runtime WASM, generates a chain spec, and starts the lightweight
 - **Substrate RPC**: `ws://127.0.0.1:9944`
 - **Ethereum RPC**: `http://127.0.0.1:8545` (requires `eth-rpc` running separately)
 
-This solo-node mode is intentionally optimized for quick runtime and contract iteration. On the omni-node release paired with `polkadot-sdk stable2512-3`, Statement Store is **not** available in dev mode, so use the relay-backed scripts (`./scripts/start-all.sh`, `./scripts/start-zombienet-all.sh`, or `./scripts/start-local.sh`) when you need the Statement Store example working locally.
+This solo-node mode is intentionally optimized for quick runtime and contract iteration. On the omni-node release paired with `polkadot-sdk stable2512-3`, Statement Store is **not** available in dev mode, so use the relay-backed scripts (`./scripts/start-all.sh` or `./scripts/start-local.sh`) when you need the Statement Store example working locally.
 
 ### Local node flags
 
@@ -198,7 +195,7 @@ The Docker setup mirrors the lightweight solo-node mode. It uses `--dev-block-ti
 ./scripts/start-local.sh
 ```
 
-Use `./scripts/start-all.sh` or `./scripts/start-zombienet-all.sh` if you want the relay-backed network plus contract deployment and frontend startup in one command.
+Use `./scripts/start-all.sh` if you want the relay-backed network plus contract deployment and frontend startup in one command.
 
 ## Bulletin Chain (IPFS Upload)
 
