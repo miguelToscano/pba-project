@@ -141,6 +141,6 @@ docker compose down -v  # tear down
 - **Runtime integration tests**: `blockchain/runtime/src/tests.rs` has only 1 compile-time API assertion test. Consider adding genesis-build smoke tests and pallet-integration tests.
 - **Shell script linting**: `scripts/` has ~1180 lines of bash with no linting in CI. A workflow running `shellcheck scripts/*.sh` would catch issues.
 - **deployments.json workflow**: The checked-in stub can cause merge conflicts when multiple branches deploy. Consider documenting the intended workflow or gitignoring it.
-- **E2E test speed**: `ci-e2e.yml` runs `test-zombienet.sh` (~15-25 min). Could be sped up by caching the compiled runtime binary across runs.
+- **E2E tests in CI**: `scripts/test-zombienet.sh` exists for local verification but is too heavy for CI (~15-25 min, requires Zombienet + binaries). Run locally before releases.
 - **Docker eth-rpc image**: No official `parity/eth-rpc` Docker image exists. `docker/Dockerfile.eth-rpc` downloads the binary from GH releases as a workaround.
 - **Commit message conventions**: Consider adopting Conventional Commits for clearer changelog generation.
