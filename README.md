@@ -69,7 +69,8 @@ A Rust CLI tool using [subxt](https://github.com/parity-tech/subxt) and [alloy](
 - [`scripts/deploy-frontend.sh`](scripts/deploy-frontend.sh) - Deploy frontend to IPFS
 - [`.github/workflows/deploy-frontend.yml`](.github/workflows/deploy-frontend.yml) - Optional manual CI deploy to IPFS + DotNS
 - [`.github/workflows/deploy-github-pages.yml`](.github/workflows/deploy-github-pages.yml) - CI deploy to GitHub Pages
-- [`blockchain/Dockerfile`](blockchain/Dockerfile) - Docker image using polkadot-omni-node
+- [`docker-compose.yml`](docker-compose.yml) - Full-stack Docker Compose (node + eth-rpc, no Rust required)
+- [`blockchain/Dockerfile`](blockchain/Dockerfile) - Lightweight deployment image (pre-built chain spec)
 - [`blockchain/zombienet.toml`](blockchain/zombienet.toml) - Example Zombienet config; local scripts generate a temp config from the active port settings
 
 ## Quick Start
@@ -216,8 +217,7 @@ polkadot-stack-template/
 |-- blockchain/
 |   |-- runtime/              Parachain runtime (polkadot-sdk stable2512)
 |   |-- pallets/template/     Proof of existence pallet with tests + benchmarks
-|   |-- Dockerfile            Docker image for deployment
-|   |-- docker-compose.yml    Docker Compose configuration
+|   `-- Dockerfile            Lightweight deployment image
 |   `-- zombienet.toml        Multi-node test network config
 |-- contracts/
 |   |-- evm/                  Hardhat project (solc -> EVM) with ProofOfExistence.sol

@@ -177,19 +177,25 @@ This repo now generates a repo-specific chain ID instead of the generic `custom`
 
 ### Docker
 
-```bash
-cd blockchain
-docker compose up
-```
-
-The Docker image copies [`blockchain/chain_spec.json`](blockchain/chain_spec.json) at build time. If you change the runtime, regenerate the chain spec first so the container does not boot with a stale file:
+For **local development** (no Rust required):
 
 ```bash
-./scripts/start-dev.sh
-# or run the build + chain-spec-builder steps from INSTALL.md manually
+docker compose up -d    # builds runtime in Docker, starts node + eth-rpc
 ```
 
-The Docker setup mirrors the lightweight solo-node mode. It uses `--dev-block-time 3000` so the container keeps authoring blocks without a relay chain, but it does **not** expose Statement Store on stable2512-3. Unlike the localhost scripts, it includes `--rpc-methods=unsafe` because the container exposes RPC externally via `--rpc-external`, and Substrate's default RPC safety policy only auto-allows unsafe RPCs on loopback addresses.
+The root `docker-compose.yml` compiles the runtime and generates the chain spec inside a multi-stage Docker build. First build takes ~10-20 minutes; subsequent builds use the Docker cache.
+
+For **deploying a pre-built image** (e.g. to a cloud server):
+
+```bash
+./scripts/start-dev.sh                              # generates blockchain/chain_spec.json
+cd blockchain && docker build -t stack-template-node .  # seconds — just copies chain spec
+docker push your-registry/stack-template-node        # lightweight ~50MB image
+```
+
+[`blockchain/Dockerfile`](blockchain/Dockerfile) packages a pre-generated chain spec into the polkadot-omni-node base image without any Rust compilation.
+
+Both Docker setups mirror the lightweight solo-node mode. They use `--dev-block-time 3000` so the container keeps authoring blocks without a relay chain, but they do **not** expose Statement Store on stable2512-3. They include `--rpc-methods=unsafe` because the container exposes RPC externally via `--rpc-external`, and Substrate's default RPC safety policy only auto-allows unsafe RPCs on loopback addresses.
 
 ### Zombienet (multi-node)
 
