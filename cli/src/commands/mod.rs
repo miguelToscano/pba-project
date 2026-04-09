@@ -234,7 +234,7 @@ pub async fn rpc_call<P: Serialize, R: DeserializeOwned>(
 	method: &str,
 	params: P,
 ) -> Result<R, Box<dyn std::error::Error>> {
-	let client = reqwest::Client::new();
+	let client = reqwest::Client::builder().timeout(std::time::Duration::from_secs(30)).build()?;
 	let response: RpcResponse = client
 		.post(rpc_url(url)?)
 		.json(&RpcRequest { jsonrpc: "2.0", id: 1u32, method, params })

@@ -4,6 +4,7 @@ import { devAccounts } from "../hooks/useAccount";
 import { evmDevAccounts } from "../config/evm";
 import { getClient } from "../hooks/useChain";
 import { stack_template } from "@polkadot-api/descriptors";
+import { formatDispatchError } from "../utils/format";
 import {
 	getInjectedExtensions,
 	connectInjectedExtension,
@@ -52,15 +53,6 @@ interface DisplayAccount {
 interface AccountInfo {
 	balance: bigint;
 	nonce: number;
-}
-
-function formatDispatchError(err: unknown): string {
-	if (!err) return "Transaction failed";
-	const e = err as { type?: string; value?: { type?: string } };
-	if (e.type === "Module" && e.value) {
-		return `${e.value.type ?? "Unknown error"}`;
-	}
-	return JSON.stringify(err);
 }
 
 function formatBalance(planck: bigint): string {

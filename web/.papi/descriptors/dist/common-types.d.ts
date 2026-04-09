@@ -2559,7 +2559,10 @@ export type I53esa2ms463bk = {
     "heap": Binary;
 };
 export type Ib4jhb8tt3uung = [Anonymize<Iejeo53sea6n4q>, number];
-export type I6ouflveob4eli = [SS58String, number];
+export type I7offqqltf3agj = {
+    "owner": SS58String;
+    "block_number": number;
+};
 export type I834nfrf667ag1 = {
     "owner": SS58String;
     "deposit": bigint;

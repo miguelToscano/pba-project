@@ -6,6 +6,7 @@ import { stack_template } from "@polkadot-api/descriptors";
 import { Binary } from "polkadot-api";
 import FileDropZone from "../components/FileDropZone";
 import { hexHashToCid, ipfsUrl, checkIpfsAvailable } from "../utils/cid";
+import { formatDispatchError } from "../utils/format";
 import { uploadToBulletin, checkBulletinAuthorization } from "../hooks/useBulletin";
 import { submitToStatementStore, checkStatementStoreAvailable } from "../hooks/useStatementStore";
 import { getDevKeypair } from "../hooks/useAccount";
@@ -14,19 +15,6 @@ interface Claim {
 	hash: string;
 	owner: string;
 	block: number;
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function formatDispatchError(err: any): string {
-	if (!err) return "Transaction failed";
-	if (err.type === "Module" && err.value) {
-		const mod = err.value;
-		return `${mod.type}.${mod.value?.type ?? ""}: ${mod.value?.value ?? ""}`.replace(
-			/:?\s*$/,
-			"",
-		);
-	}
-	return JSON.stringify(err);
 }
 
 export default function PalletPage() {
