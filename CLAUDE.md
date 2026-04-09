@@ -105,7 +105,7 @@ docker compose down -v  # tear down
 - `Dockerfile.node` — multi-stage: compiles runtime WASM, generates chain spec, packages into polkadot-omni-node image
 - `Dockerfile.eth-rpc` — downloads pre-built eth-rpc binary from polkadot-sdk GH release (no official Docker image exists)
 - `docker-compose.yml` (root) — full stack: node (port 9944) + eth-rpc (port 8545)
-- `blockchain/docker-compose.yml` — simple node-only option (requires pre-generated chain_spec.json)
+- `blockchain/docker-compose.yml` — simple node-only option (requires pre-generated chain_spec.json); prefer root compose
 - `.dockerignore` — excludes web/, contracts/, target/, node_modules/ from build context
 
 ## Running Locally

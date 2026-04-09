@@ -2,6 +2,21 @@
 
 This document covers all prerequisites and setup steps needed to build and run the Polkadot Stack Template.
 
+## Docker Quick Start (no Rust required)
+
+If you have **Docker** and **Node.js 22**, you can skip all the Rust/binary setup:
+
+```bash
+docker compose up -d          # builds the runtime in Docker (~10-20 min first time)
+cd contracts/evm && npm install && npm run deploy:local
+cd ../pvm && npm install && npm run deploy:local
+cd ../../web && npm install && npm run dev
+```
+
+This starts the parachain node (port 9944) and Ethereum RPC adapter (port 8545) in Docker. Contracts and frontend run on the host. See the root `docker-compose.yml` for details.
+
+If you prefer to install everything natively (faster iteration, required for runtime development), continue below.
+
 ## Prerequisites
 
 ### Rust

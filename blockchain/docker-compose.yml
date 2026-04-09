@@ -1,3 +1,7 @@
+# Node-only Docker setup using a pre-generated chain spec.
+# For a self-contained stack (node + eth-rpc, no Rust required),
+# use the root docker-compose.yml instead:  cd .. && docker compose up -d
+
 services:
   node:
     image: stack-template-node:latest
@@ -12,7 +16,6 @@ services:
     volumes:
       - chain-data:/data
     command: >
-      polkadot-omni-node
       --chain=/chain/chain_spec.json
       --base-path=/data
       --alice
