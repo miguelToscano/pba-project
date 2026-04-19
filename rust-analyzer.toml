@@ -6,12 +6,10 @@
 # Skip WASM runtime compilation during analysis — saves ~50% of build time.
 extraEnv = { "SKIP_WASM_BUILD" = "1" }
 
-# Use a separate target directory so rust-analyzer and CLI cargo builds
+# Use a separate target directory so rust-analyzer and terminal cargo builds
 # do not invalidate each other's caches.
 targetDir = "target/rust-analyzer"
 
-# The workspace has a member crate at cli/, but there is no Cargo feature named "cli".
-# Passing `--features cli` breaks `cargo check --workspace` (rust-analyzer / editor defaults).
 # Empty list = default features per crate only.
 features = []
 

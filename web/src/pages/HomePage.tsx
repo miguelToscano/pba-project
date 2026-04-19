@@ -20,21 +20,49 @@ export default function HomePage() {
 	const [error, setError] = useState<string | null>(null);
 	const [chainName, setChainName] = useState<string | null>(null);
 	const [connecting, setConnecting] = useState(false);
-	const [registerBusy, setRegisterBusy] = useState(false);
-	const [customerMsg, setCustomerMsg] = useState<string | null>(null);
-	const [isCustomer, setIsCustomer] = useState<boolean | null>(null);
 
-	const refreshCustomerStatus = useCallback(async () => {
+	const [busyCustomer, setBusyCustomer] = useState(false);
+	const [busyRestaurant, setBusyRestaurant] = useState(false);
+	const [busyRider, setBusyRider] = useState(false);
+
+	const [msgCustomer, setMsgCustomer] = useState<string | null>(null);
+	const [msgRestaurant, setMsgRestaurant] = useState<string | null>(null);
+	const [msgRider, setMsgRider] = useState<string | null>(null);
+
+	const [isCustomer, setIsCustomer] = useState<boolean | null>(null);
+	const [isRestaurant, setIsRestaurant] = useState<boolean | null>(null);
+	const [isRider, setIsRider] = useState<boolean | null>(null);
+
+	/** Temporary: inspect pallet storage maps (read-only). */
+	const [storageListBusy, setStorageListBusy] = useState<
+		null | "customers" | "restaurants" | "riders"
+	>(null);
+	const [storageListText, setStorageListText] = useState<string | null>(null);
+	const [storageListError, setStorageListError] = useState<string | null>(null);
+
+	const anyRegisterBusy = busyCustomer || busyRestaurant || busyRider;
+
+	const refreshRegistrationStatus = useCallback(async () => {
 		if (!connected || pallets.templatePallet !== true || !walletAddress) {
 			setIsCustomer(null);
+			setIsRestaurant(null);
+			setIsRider(null);
 			return;
 		}
 		try {
 			const api = getClient(wsUrl).getTypedApi(stack_template);
-			const row = await api.query.TemplatePallet.Customers.getValue(walletAddress);
-			setIsCustomer(row !== undefined);
+			const [c, r, d] = await Promise.all([
+				api.query.TemplatePallet.Customers.getValue(walletAddress),
+				api.query.TemplatePallet.Restaurants.getValue(walletAddress),
+				api.query.TemplatePallet.Riders.getValue(walletAddress),
+			]);
+			setIsCustomer(c !== undefined);
+			setIsRestaurant(r !== undefined);
+			setIsRider(d !== undefined);
 		} catch {
 			setIsCustomer(null);
+			setIsRestaurant(null);
+			setIsRider(null);
 		}
 	}, [connected, pallets.templatePallet, wsUrl, walletAddress]);
 
@@ -54,8 +82,8 @@ export default function HomePage() {
 	}, [connected, wsUrl]);
 
 	useEffect(() => {
-		void refreshCustomerStatus();
-	}, [refreshCustomerStatus, blockNumber]);
+		void refreshRegistrationStatus();
+	}, [refreshRegistrationStatus, blockNumber]);
 
 	async function handleConnect() {
 		setConnecting(true);
@@ -79,38 +107,138 @@ export default function HomePage() {
 		setUrlInput(endpoints.wsUrl);
 	}
 
-	async function registerAsCustomer() {
-		if (!connected || pallets.templatePallet !== true || !walletSigner || !walletAddress) {
-			return;
-		}
-		setRegisterBusy(true);
-		setCustomerMsg(null);
-		try {
-			const api = getClient(wsUrl).getTypedApi(stack_template);
-			const tx = api.tx.TemplatePallet.create_customer();
-			const result = await tx.signAndSubmit(walletSigner);
-			if (!result.ok) {
-				setCustomerMsg(`Error: ${formatDispatchError(result.dispatchError)}`);
-				return;
-			}
-			setCustomerMsg("You are registered as a customer.");
-			await refreshCustomerStatus();
-		} catch (e) {
-			console.error(e);
-			setCustomerMsg(`Error: ${e instanceof Error ? e.message : String(e)}`);
-		} finally {
-			setRegisterBusy(false);
-		}
-	}
-
-	const canRegister =
+	const registrationReady =
 		connected &&
 		pallets.templatePallet === true &&
 		!!walletAddress &&
 		!!walletSigner &&
 		!signerLoading &&
-		!registerBusy &&
-		isCustomer !== true;
+		!anyRegisterBusy;
+
+	async function registerAsCustomer() {
+		if (!registrationReady) return;
+		setBusyCustomer(true);
+		setMsgCustomer(null);
+		try {
+			const api = getClient(wsUrl).getTypedApi(stack_template);
+			const tx = api.tx.TemplatePallet.create_customer();
+			const result = await tx.signAndSubmit(walletSigner);
+			if (!result.ok) {
+				setMsgCustomer(`Error: ${formatDispatchError(result.dispatchError)}`);
+				return;
+			}
+			setMsgCustomer("You are registered as a customer.");
+			await refreshRegistrationStatus();
+		} catch (e) {
+			console.error(e);
+			setMsgCustomer(`Error: ${e instanceof Error ? e.message : String(e)}`);
+		} finally {
+			setBusyCustomer(false);
+		}
+	}
+
+	async function registerAsRestaurant() {
+		if (!registrationReady) return;
+		setBusyRestaurant(true);
+		setMsgRestaurant(null);
+		try {
+			const api = getClient(wsUrl).getTypedApi(stack_template);
+			const tx = api.tx.TemplatePallet.create_restaurant();
+			const result = await tx.signAndSubmit(walletSigner);
+			if (!result.ok) {
+				setMsgRestaurant(`Error: ${formatDispatchError(result.dispatchError)}`);
+				return;
+			}
+			setMsgRestaurant("You are registered as a restaurant.");
+			await refreshRegistrationStatus();
+		} catch (e) {
+			console.error(e);
+			setMsgRestaurant(`Error: ${e instanceof Error ? e.message : String(e)}`);
+		} finally {
+			setBusyRestaurant(false);
+		}
+	}
+
+	async function loadRegisteredAccounts(kind: "customers" | "restaurants" | "riders") {
+		if (!connected || pallets.templatePallet !== true) return;
+		setStorageListBusy(kind);
+		setStorageListError(null);
+		setStorageListText(null);
+		try {
+			const api = getClient(wsUrl).getTypedApi(stack_template);
+			const entries =
+				kind === "customers"
+					? await api.query.TemplatePallet.Customers.getEntries()
+					: kind === "restaurants"
+						? await api.query.TemplatePallet.Restaurants.getEntries()
+						: await api.query.TemplatePallet.Riders.getEntries();
+			const addresses = entries.map((entry) => String(entry.keyArgs[0]));
+			const label =
+				kind === "customers"
+					? "Customers"
+					: kind === "restaurants"
+						? "Restaurants"
+						: "Riders";
+			setStorageListText(
+				`${label} (${addresses.length})\n${addresses.length ? addresses.join("\n") : "(none)"}`,
+			);
+		} catch (e) {
+			console.error(e);
+			setStorageListError(e instanceof Error ? e.message : String(e));
+			setStorageListText(null);
+		} finally {
+			setStorageListBusy(null);
+		}
+	}
+
+	async function registerAsRider() {
+		if (!registrationReady) return;
+		setBusyRider(true);
+		setMsgRider(null);
+		try {
+			const api = getClient(wsUrl).getTypedApi(stack_template);
+			const tx = api.tx.TemplatePallet.create_rider();
+			const result = await tx.signAndSubmit(walletSigner);
+			if (!result.ok) {
+				setMsgRider(`Error: ${formatDispatchError(result.dispatchError)}`);
+				return;
+			}
+			setMsgRider("You are registered as a rider.");
+			await refreshRegistrationStatus();
+		} catch (e) {
+			console.error(e);
+			setMsgRider(`Error: ${e instanceof Error ? e.message : String(e)}`);
+		} finally {
+			setBusyRider(false);
+		}
+	}
+
+	function roleStatusLine(reg: boolean | null, label: string) {
+		if (reg === true) {
+			return (
+				<span className="text-sm text-accent-green font-medium">
+					Already registered as {label}
+				</span>
+			);
+		}
+		if (reg === false) {
+			return <span className="text-sm text-text-tertiary">Not registered yet</span>;
+		}
+		return null;
+	}
+
+	function roleMessage(msg: string | null) {
+		if (!msg) return null;
+		return (
+			<p
+				className={`text-sm font-medium ${
+					msg.startsWith("Error") ? "text-accent-red" : "text-accent-green"
+				}`}
+			>
+				{msg}
+			</p>
+		);
+	}
 
 	return (
 		<div className="space-y-8 animate-fade-in">
@@ -188,7 +316,7 @@ export default function HomePage() {
 				</div>
 			</div>
 
-			{/* Feature + customer registration */}
+			{/* Feature + role registration */}
 			<div className="max-w-xl space-y-4">
 				<FeatureCard
 					title="Pallet PoE"
@@ -201,18 +329,15 @@ export default function HomePage() {
 				/>
 
 				{pallets.templatePallet === true && (
-					<div className="card space-y-4">
+					<div className="card space-y-6">
 						<div>
 							<h3 className="text-lg font-semibold font-display text-text-primary mb-1">
-								Customer registration
+								Role registration
 							</h3>
 							<p className="text-sm text-text-secondary">
-								Submit a{" "}
-								<code className="text-xs font-mono bg-white/[0.04] px-1 rounded">
-									create_customer
-								</code>{" "}
-								call using your connected browser extension account. Your wallet will open for
-								you to review and sign the extrinsic.
+								Register as a customer, restaurant, or rider using your connected browser
+								extension. Each action submits the matching extrinsic; your wallet will ask you
+								to sign.
 							</p>
 						</div>
 						<div className="rounded-lg bg-white/[0.03] border border-white/[0.06] px-3 py-2">
@@ -233,38 +358,134 @@ export default function HomePage() {
 						{signerLoading && walletAddress && (
 							<p className="text-sm text-accent-yellow">Preparing extension signer…</p>
 						)}
-						<div className="flex flex-wrap items-center gap-3">
-							<button
-								type="button"
-								onClick={() => void registerAsCustomer()}
-								disabled={!canRegister}
-								className="btn-primary disabled:opacity-40 disabled:cursor-not-allowed"
-							>
-								{registerBusy
-									? "Awaiting signature / confirming…"
-									: "Register as Customer"}
-							</button>
-							{isCustomer === true && (
-								<span className="text-sm text-accent-green font-medium">
-									Already registered for this account
-								</span>
+
+						<RoleRow
+							title="Customer"
+							callName="create_customer"
+							onRegister={() => void registerAsCustomer()}
+							disabled={!registrationReady || isCustomer === true}
+							busy={busyCustomer}
+							buttonLabel="Register as Customer"
+							status={roleStatusLine(isCustomer, "a customer")}
+							message={roleMessage(msgCustomer)}
+							withTopDivider={false}
+						/>
+
+						<RoleRow
+							title="Restaurant"
+							callName="create_restaurant"
+							onRegister={() => void registerAsRestaurant()}
+							disabled={!registrationReady || isRestaurant === true}
+							busy={busyRestaurant}
+							buttonLabel="Register as Restaurant"
+							status={roleStatusLine(isRestaurant, "a restaurant")}
+							message={roleMessage(msgRestaurant)}
+						/>
+
+						<RoleRow
+							title="Rider"
+							callName="create_rider"
+							onRegister={() => void registerAsRider()}
+							disabled={!registrationReady || isRider === true}
+							busy={busyRider}
+							buttonLabel="Register as Rider"
+							status={roleStatusLine(isRider, "a rider")}
+							message={roleMessage(msgRider)}
+						/>
+
+						<div className="border-t border-dashed border-white/[0.12] pt-4 space-y-3">
+							<p className="text-xs text-text-tertiary">
+								Temporary — list accounts in pallet storage (read-only RPC, no signature).
+							</p>
+							<div className="flex flex-wrap gap-2">
+								<button
+									type="button"
+									onClick={() => void loadRegisteredAccounts("customers")}
+									disabled={!connected || storageListBusy !== null}
+									className="btn-secondary text-xs disabled:opacity-40"
+								>
+									{storageListBusy === "customers" ? "Loading…" : "List customers"}
+								</button>
+								<button
+									type="button"
+									onClick={() => void loadRegisteredAccounts("restaurants")}
+									disabled={!connected || storageListBusy !== null}
+									className="btn-secondary text-xs disabled:opacity-40"
+								>
+									{storageListBusy === "restaurants" ? "Loading…" : "List restaurants"}
+								</button>
+								<button
+									type="button"
+									onClick={() => void loadRegisteredAccounts("riders")}
+									disabled={!connected || storageListBusy !== null}
+									className="btn-secondary text-xs disabled:opacity-40"
+								>
+									{storageListBusy === "riders" ? "Loading…" : "List riders"}
+								</button>
+							</div>
+							{storageListError && (
+								<p className="text-sm text-accent-red">{storageListError}</p>
 							)}
-							{isCustomer === false && (
-								<span className="text-sm text-text-tertiary">Not registered yet</span>
+							{storageListText && (
+								<div className="rounded-lg bg-black/25 border border-white/[0.06] px-3 py-2 max-h-48 overflow-y-auto">
+									<pre className="text-xs font-mono text-text-secondary whitespace-pre-wrap break-all">
+										{storageListText}
+									</pre>
+								</div>
 							)}
 						</div>
-						{customerMsg && (
-							<p
-								className={`text-sm font-medium ${
-									customerMsg.startsWith("Error") ? "text-accent-red" : "text-accent-green"
-								}`}
-							>
-								{customerMsg}
-							</p>
-						)}
 					</div>
 				)}
 			</div>
+		</div>
+	);
+}
+
+function RoleRow({
+	title,
+	callName,
+	onRegister,
+	disabled,
+	busy,
+	buttonLabel,
+	status,
+	message,
+	withTopDivider = true,
+}: {
+	title: string;
+	callName: string;
+	onRegister: () => void;
+	disabled: boolean;
+	busy: boolean;
+	buttonLabel: string;
+	status: React.ReactNode;
+	message: React.ReactNode;
+	withTopDivider?: boolean;
+}) {
+	return (
+		<div
+			className={`space-y-2 py-3 ${withTopDivider ? "border-t border-white/[0.06]" : ""}`}
+		>
+			<div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+				<div>
+					<h4 className="text-sm font-semibold text-text-primary">{title}</h4>
+					<p className="text-xs text-text-tertiary mt-0.5">
+						<code className="font-mono bg-white/[0.04] px-1 rounded">{callName}</code>
+					</p>
+				</div>
+				<div className="flex flex-wrap items-center gap-3">
+					<button
+						type="button"
+						onClick={onRegister}
+						disabled={disabled}
+						className="btn-primary disabled:opacity-40 disabled:cursor-not-allowed text-sm"
+					>
+						{busy ? "Awaiting signature / confirming…" : buttonLabel}
+					</button>
+					{status}
+				</div>
+			</div>
+			{message}
 		</div>
 	);
 }

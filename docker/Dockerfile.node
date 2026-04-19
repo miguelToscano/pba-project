@@ -14,7 +14,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends protobuf-compil
 RUN rustup target add wasm32-unknown-unknown && rustup component add rust-src
 COPY Cargo.toml Cargo.lock ./
 COPY blockchain/ blockchain/
-COPY cli/ cli/
 RUN cargo build -p stack-template-runtime --release
 
 # Stage 2 — Generate the chain spec from the compiled WASM

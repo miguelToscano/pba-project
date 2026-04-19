@@ -1,4 +1,4 @@
-use crate::{mock::*, pallet::Error, Claims};
+use crate::{mock::*, pallet::Error, Claims, Customers, Restaurants, Riders};
 use frame::testing_prelude::*;
 
 fn test_hash(n: u64) -> H256 {
@@ -104,6 +104,93 @@ fn unsigned_origin_is_rejected() {
 		assert_noop!(
 			ProofOfExistence::revoke_claim(RuntimeOrigin::none(), hash),
 			DispatchError::BadOrigin,
+		);
+		assert_noop!(
+			ProofOfExistence::create_customer(RuntimeOrigin::none()),
+			DispatchError::BadOrigin,
+		);
+		assert_noop!(
+			ProofOfExistence::create_restaurant(RuntimeOrigin::none()),
+			DispatchError::BadOrigin,
+		);
+		assert_noop!(
+			ProofOfExistence::create_rider(RuntimeOrigin::none()),
+			DispatchError::BadOrigin,
+		);
+	});
+}
+
+#[test]
+fn create_customer_works() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(ProofOfExistence::create_customer(RuntimeOrigin::signed(1)));
+		assert!(Customers::<Test>::contains_key(1));
+	});
+}
+
+#[test]
+fn create_customer_fails_if_duplicate() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(ProofOfExistence::create_customer(RuntimeOrigin::signed(1)));
+		assert_noop!(
+			ProofOfExistence::create_customer(RuntimeOrigin::signed(1)),
+			Error::<Test>::AlreadyCustomer,
+		);
+	});
+}
+
+#[test]
+fn create_restaurant_works() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(ProofOfExistence::create_restaurant(RuntimeOrigin::signed(2)));
+		assert!(Restaurants::<Test>::contains_key(2));
+	});
+}
+
+#[test]
+fn create_restaurant_emits_event() {
+	new_test_ext().execute_with(|| {
+		System::set_block_number(1);
+		assert_ok!(ProofOfExistence::create_restaurant(RuntimeOrigin::signed(3)));
+		System::assert_last_event(crate::Event::RestaurantCreated { who: 3 }.into());
+	});
+}
+
+#[test]
+fn create_restaurant_fails_if_duplicate() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(ProofOfExistence::create_restaurant(RuntimeOrigin::signed(1)));
+		assert_noop!(
+			ProofOfExistence::create_restaurant(RuntimeOrigin::signed(1)),
+			Error::<Test>::AlreadyRestaurant,
+		);
+	});
+}
+
+#[test]
+fn create_rider_works() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(ProofOfExistence::create_rider(RuntimeOrigin::signed(4)));
+		assert!(Riders::<Test>::contains_key(4));
+	});
+}
+
+#[test]
+fn create_rider_emits_event() {
+	new_test_ext().execute_with(|| {
+		System::set_block_number(1);
+		assert_ok!(ProofOfExistence::create_rider(RuntimeOrigin::signed(5)));
+		System::assert_last_event(crate::Event::RiderCreated { who: 5 }.into());
+	});
+}
+
+#[test]
+fn create_rider_fails_if_duplicate() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(ProofOfExistence::create_rider(RuntimeOrigin::signed(1)));
+		assert_noop!(
+			ProofOfExistence::create_rider(RuntimeOrigin::signed(1)),
+			Error::<Test>::AlreadyRider,
 		);
 	});
 }

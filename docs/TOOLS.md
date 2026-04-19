@@ -4,7 +4,7 @@ This document describes all the parts of the Polkadot technology stack exposed b
 
 ## Required vs Optional
 
-- **Required for the smallest local demo**: Rust, `polkadot-omni-node`, the runtime, the pallet, and optionally the CLI.
+- **Required for the smallest local demo**: Rust, `polkadot-omni-node`, the runtime, and the pallet.
 - **Optional JSON-RPC tooling**: `eth-rpc` runs alongside the node if you attach standard Ethereum clients to `pallet-revive`.
 - **Required for the web app**: add `web/` plus the committed PAPI descriptors in `web/.papi/`.
 - **Optional extras**: Bulletin Chain (IPFS uploads), Spektr host integration, and DotNS deployment. These are isolated so students can remove them without touching the core PoE flows.
@@ -34,11 +34,9 @@ The full-feature local scripts generate a local relay-chain-backed spec and then
 
 The lighter solo-node tools (`start-dev.sh` and Docker Compose) use omni-node dev mode for a faster iteration loop. On `polkadot-sdk stable2512-3`, that dev path does not wire up Statement Store even if `--enable-statement-store` is passed.
 
-The current template integration is active in all three local entry points:
+The current template integration is active in the web app:
 
-- CLI: signed submission and dump flows via `stack-cli chain statement-submit` / `statement-dump`
-- Frontend: optional Statement Store submission from the pallet page
-- Scripts: [`scripts/test-statement-store-smoke.sh`](../scripts/test-statement-store-smoke.sh) runs a relay-backed local submission and dump check
+- Frontend: optional Statement Store submission from the pallet page (when the node exposes Statement Store RPCs)
 
 ## pallet-revive (EVM + PVM)
 
@@ -72,7 +70,7 @@ The Polkadot Bulletin Chain is a system chain that provides on-chain data storag
 - **Data expiry**: ~7 days (100,800 blocks) unless renewed
 - **Max file size**: 8 MiB per transaction
 - **Used for**: Optional IPFS upload of files before claiming their hash on-chain
-- **Source**: [`web/src/hooks/useBulletin.ts`](../web/src/hooks/useBulletin.ts), [`cli/src/commands/mod.rs`](../cli/src/commands/mod.rs)
+- **Source**: [`web/src/hooks/useBulletin.ts`](../web/src/hooks/useBulletin.ts)
 
 Authorization on Bulletin Paseo is temporary. The allowance expires at a block roughly 100,000 blocks in the future, and the same UI exposes `Renew` if you need more time. If upload fails with an authorization error, first check that you authorized the same Substrate address that is signing `TransactionStorage.store()`.
 
@@ -127,34 +125,13 @@ const result = await api.tx.TemplatePallet.create_claim({
 
 Also used for Bulletin Chain interaction via a separate client with the `bulletin` descriptor. The repo now fails fast if `papi generate` fails, which makes descriptor drift easier for students and AI agents to diagnose.
 
-## subxt
-
-The Rust library for interacting with Substrate chains. Used by the CLI for native Substrate RPC calls — querying storage, submitting extrinsics, and iterating storage entries.
-
-- **Version**: 0.38
-- **Used for**: CLI pallet commands (create-claim, revoke-claim, get-claim, list-claims)
-- **Source**: [`cli/src/commands/pallet.rs`](../cli/src/commands/pallet.rs)
-- **Docs**: [github.com/parity-tech/subxt](https://github.com/parity-tech/subxt)
-
-### Key patterns
-
-```rust
-// Dynamic storage query
-let query = subxt::dynamic::storage("TemplatePallet", "Claims", vec![Value::from_bytes(hash)]);
-let result = api.storage().at_latest().await?.fetch(&query).await?;
-
-// Dynamic transaction
-let tx = subxt::dynamic::tx("TemplatePallet", "create_claim", vec![("hash", Value::from_bytes(hash))]);
-api.tx().sign_and_submit_then_watch_default(&tx, &signer).await?;
-```
-
 ## Code Formatting & Linting
 
 Consistent formatting across all languages.
 
 | Tool | Scope | Config |
 |---|---|---|
-| `rustfmt` (nightly) | Rust (blockchain/, cli/) | `rustfmt.toml` — matches polkadot-sdk style |
+| `rustfmt` (nightly) | Rust (`blockchain/`) | `rustfmt.toml` — matches polkadot-sdk style |
 | ESLint | TypeScript/React (web/) | `web/eslint.config.js` — typescript-eslint + react-hooks |
 | Prettier | TypeScript (web/) | `.prettierrc` (root) |
 

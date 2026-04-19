@@ -46,5 +46,23 @@ mod benchmarks {
 		assert!(Customers::<T>::contains_key(&caller));
 	}
 
+	#[benchmark]
+	fn create_restaurant() {
+		let caller: T::AccountId = whitelisted_caller();
+		#[extrinsic_call]
+		create_restaurant(RawOrigin::Signed(caller.clone()));
+
+		assert!(Restaurants::<T>::contains_key(&caller));
+	}
+
+	#[benchmark]
+	fn create_rider() {
+		let caller: T::AccountId = whitelisted_caller();
+		#[extrinsic_call]
+		create_rider(RawOrigin::Signed(caller.clone()));
+
+		assert!(Riders::<T>::contains_key(&caller));
+	}
+
 	impl_benchmark_test_suite!(ProofOfExistence, crate::mock::new_test_ext(), crate::mock::Test);
 }

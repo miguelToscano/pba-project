@@ -8,9 +8,9 @@ All scripts resolve the repo root automatically, so you can run them from the re
 ./scripts/<script-name>.sh
 ```
 
-`start-all.sh` is the recommended full local path when you want the chain, CLI, and frontend working together.
+`start-all.sh` is the recommended full local path when you want the chain and frontend working together.
 
-The local startup scripts coordinate the chain, `eth-rpc`, CLI defaults, PAPI refresh, and frontend from shared environment variables.
+The local startup scripts coordinate the chain, `eth-rpc`, PAPI refresh, and frontend from shared environment variables.
 
 By default they use:
 
@@ -26,7 +26,7 @@ STACK_PORT_OFFSET=100 ./scripts/start-all.sh
 
 You can also override individual ports with `STACK_SUBSTRATE_RPC_PORT`, `STACK_ETH_RPC_PORT`, and `STACK_FRONTEND_PORT`.
 
-When you use an offset or explicit port overrides, the frontend dev server, CLI defaults, and PAPI refresh follow the active port settings automatically.
+When you use an offset or explicit port overrides, the frontend dev server and PAPI refresh follow the active port settings automatically.
 
 ## Script Guide
 
@@ -34,17 +34,15 @@ When you use an offset or explicit port overrides, the frontend dev server, CLI 
 | --- | --- | --- |
 | `start-dev.sh` | Builds the runtime, generates `blockchain/chain_spec.json`, and starts a single local omni-node on the resolved Substrate RPC port using dev sealing. | Use this when you only need the fastest local pallet/runtime loop. On stable2512-3, this mode does not expose Statement Store RPCs. |
 | `start-frontend.sh` | Installs frontend dependencies, refreshes PAPI descriptors if a local node is running on the resolved Substrate RPC port, and starts the Vite dev server on the resolved frontend port. | Use this when the chain is already running and you only want to work on the web app. |
-| `start-all.sh` | Runs the full local stack through Zombienet: runtime build, chain-spec generation, relay chain + parachain startup, Statement Store-ready RPCs, `eth-rpc`, CLI build, and frontend startup. | Use this when you want the one-command setup with Statement Store and the pallet-focused examples. |
+| `start-all.sh` | Runs the full local stack through Zombienet: runtime build, chain-spec generation, relay chain + parachain startup, Statement Store-ready RPCs, `eth-rpc`, and frontend startup. | Use this when you want the one-command setup with Statement Store and the pallet-focused examples. |
 | `start-local.sh` | Builds the runtime, regenerates `blockchain/chain_spec.json`, and starts the relay-backed Zombienet network using a temp config generated from the current port settings. | Use this when you want the relay-backed network directly, without the scripted frontend startup. |
 | `deploy-frontend.sh` | Builds the frontend and uploads `web/dist` to IPFS using the `w3` CLI, then prints the CID and suggested DotNS follow-up steps. | Use this when you want to publish the frontend as a static deployment. |
-| `test-zombienet.sh` | Starts a Zombienet network and runs automated E2E tests covering pallet PoE, Statement Store submit/dump, combined pallet+statement-store claims, and the `prove` command. Reports pass/fail for each test. | Use this for end-to-end verification before merging or releasing. |
-| `test-statement-store-smoke.sh` | Builds the runtime, starts a temporary Zombienet relay chain + collator with Statement Store enabled, verifies the store is initially empty, submits a signed statement through the CLI, and checks that `statement-dump` returns it. | Use this when you want a focused end-to-end sanity check of the Statement Store integration on the same supported local topology the template documents. |
 | `download-sdk-binaries.sh` | Downloads `polkadot` plus `polkadot-prepare-worker` / `polkadot-execute-worker` (required beside relay `polkadot`), `polkadot-omni-node`, and `eth-rpc` from the stable2512-3 release into `./bin/` (gitignored). | Use this to prefetch SDK binaries, or rely on the same download step from `common.sh` unless disabled. |
 
 ## Notes
 
 - Stack scripts default to **`STACK_DOWNLOAD_SDK_BINARIES=1`**: matching SDK binaries are placed under **`./bin/`** (ignored by git) and preferred over tools elsewhere on `PATH`. Set `STACK_DOWNLOAD_SDK_BINARIES=0` to only use binaries you installed yourself.
 - `start-dev.sh` depends on local Rust and node tooling such as `cargo`, `chain-spec-builder`, and `polkadot-omni-node`.
-- `start-all.sh`, `start-local.sh`, `test-statement-store-smoke.sh`, and `test-zombienet.sh` require both `polkadot` and `zombienet`.
-- `start-all.sh` and `test-zombienet.sh` also require `eth-rpc`.
+- `start-all.sh` and `start-local.sh` require both `polkadot` and `zombienet`.
+- `start-all.sh` also requires `eth-rpc`.
 - `deploy-frontend.sh` requires the `w3` CLI from Web3.Storage.

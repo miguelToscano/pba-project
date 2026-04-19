@@ -213,7 +213,7 @@ To run a second local stack or move the defaults, use:
 STACK_PORT_OFFSET=100 ./scripts/start-all.sh
 ```
 
-That shifts the main local endpoints to `10044`, `8645`, and `5273`, and the scripts also regenerate the matching Zombienet, `eth-rpc`, CLI, and frontend settings automatically. For explicit control, set `STACK_SUBSTRATE_RPC_PORT`, `STACK_ETH_RPC_PORT`, and `STACK_FRONTEND_PORT`.
+That shifts the main local endpoints to `10044`, `8645`, and `5273`, and the scripts also regenerate the matching Zombienet, `eth-rpc`, and frontend settings automatically. For explicit control, set `STACK_SUBSTRATE_RPC_PORT`, `STACK_ETH_RPC_PORT`, and `STACK_FRONTEND_PORT`.
 
 ### Running Components Individually
 
@@ -234,18 +234,6 @@ The repo ships two local modes:
 
 - `start-dev.sh` uses `--dev-block-time 3000` for the fastest solo-node workflow. On `polkadot-sdk stable2512-3`, omni-node dev mode does **not** register Statement Store RPCs.
 - `start-all.sh` and `start-local.sh` use Zombienet (relay chain + collator) when you need the full feature set, including Statement Store.
-
-### CLI
-
-```bash
-cargo run -p stack-cli -- chain info
-cargo run -p stack-cli -- pallet create-claim --file ./README.md
-cargo run -p stack-cli -- pallet list-claims
-```
-
-The CLI is part of the Rust workspace, so `cargo run -p stack-cli -- ...` works from the repo root.
-
-When you launch the local stack through the scripts, the CLI picks up `SUBSTRATE_RPC_WS` from the environment automatically. You can still pass `--url` explicitly when you want to target another chain.
 
 ## Polkadot Hub TestNet
 

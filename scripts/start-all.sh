@@ -36,26 +36,23 @@ echo ""
 validate_full_external_toolchain
 validate_full_stack_ports
 
-echo "[1/6] Building runtime..."
+echo "[1/5] Building runtime..."
 build_runtime
 
-echo "[2/6] Generating chain spec..."
+echo "[2/5] Generating chain spec..."
 generate_chain_spec
 
-echo "[3/6] Starting Zombienet (relay chain + parachain)..."
+echo "[3/5] Starting Zombienet (relay chain + parachain)..."
 log_info "This takes longer than dev mode because the relay chain must finalize"
 log_info "and the parachain must register before the collator starts authoring."
 start_zombienet_background
 wait_for_substrate_rpc
 
-echo "[4/6] Starting eth-rpc adapter..."
+echo "[4/5] Starting eth-rpc adapter..."
 start_eth_rpc_background
 wait_for_eth_rpc
 
-echo "[5/6] Building CLI..."
-cargo build -p stack-cli --release
-
-echo "[6/6] Starting frontend..."
+echo "[5/5] Starting frontend..."
 cd "$ROOT_DIR/web"
 npm install
 

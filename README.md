@@ -2,7 +2,7 @@
 
 A developer starter template demonstrating the Polkadot stack through a **Proof of Existence** system — claim file hashes on-chain via a Substrate FRAME pallet. Drop a file, claim its hash on-chain, and optionally upload it to IPFS via the Bulletin Chain.
 
-Students do not need to use every optional integration in this repo. The runtime, pallet, frontend, CLI, Bulletin integration, Spektr integration, and deployment workflows are intentionally separated so teams can keep only what they want.
+Students do not need to use every optional integration in this repo. The runtime, pallet, frontend, Bulletin integration, Spektr integration, and deployment workflows are intentionally separated so teams can keep only what they want.
 
 ## What's Inside
 
@@ -10,7 +10,6 @@ Students do not need to use every optional integration in this repo. The runtime
   - **Substrate Pallet** ([`blockchain/pallets/template/`](blockchain/pallets/template/)) — FRAME pallet for creating and revoking Proof of Existence claims on-chain
   - **Parachain Runtime** ([`blockchain/runtime/`](blockchain/runtime/)) — Runtime wiring for the pallet and supporting infrastructure (`pallet-revive`, etc.)
 - **Frontend** ([`web/`](web/)) — React + TypeScript app using PAPI for pallet interactions
-- **CLI** ([`cli/`](cli/)) — Rust CLI for chain queries and pallet operations via subxt
 - **Dev Scripts** ([`scripts/`](scripts/)) — One-command scripts to build, start, and test the stack locally
 
 ## Quick Start
@@ -49,7 +48,7 @@ The repo includes [`.nvmrc`](.nvmrc) and `engines` fields in the JavaScript proj
 ### Run locally
 
 ```bash
-# Start relay-backed stack, eth-rpc, CLI build, and frontend in one command
+# Start relay-backed stack, eth-rpc, and frontend in one command
 ./scripts/start-all.sh
 # Substrate RPC: ws://127.0.0.1:9944
 # Ethereum RPC:  http://127.0.0.1:8545
@@ -63,7 +62,6 @@ For the solo-node loop, relay-backed network without the full scripted loop, fro
 For component-specific next steps:
 
 - [`web/README.md`](web/README.md)
-- [`cli/README.md`](cli/README.md)
 
 ### Lint & format
 
@@ -88,15 +86,8 @@ cargo test -p pallet-template
 # All tests including benchmarks
 SKIP_PALLET_REVIVE_FIXTURES=1 cargo test --workspace --features runtime-benchmarks
 
-# Statement Store runtime + CLI coverage
+# Statement Store runtime coverage
 cargo test -p stack-template-runtime
-cargo test -p stack-cli
-
-# Relay-backed Statement Store smoke test
-./scripts/test-statement-store-smoke.sh
-
-# Comprehensive Zombienet E2E (local only; requires binaries)
-./scripts/test-zombienet.sh
 ```
 
 ## Documentation
@@ -109,7 +100,6 @@ cargo test -p stack-cli
 
 - **Pallet + runtime**: [`blockchain/pallets/template/`](blockchain/pallets/template/), [`blockchain/runtime/`](blockchain/runtime/)
 - **Frontend**: Core PoE UI lives in [`web/src/pages/PalletPage.tsx`](web/src/pages/PalletPage.tsx). The Accounts page, Spektr support, and Bulletin upload hooks are optional extras.
-- **CLI**: [`cli/`](cli/)
 - **Optional integrations**: Bulletin Chain, Spektr, DotNS — see [docs/TOOLS.md](docs/TOOLS.md).
 
 ## Key Versions

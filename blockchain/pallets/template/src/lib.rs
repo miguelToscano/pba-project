@@ -47,6 +47,14 @@ pub mod pallet {
 	#[derive(Encode, Decode, Clone, Copy, PartialEq, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 	pub struct Customer;
 
+	/// A restaurant record registered on-chain (extensible; currently a marker type).
+	#[derive(Encode, Decode, Clone, Copy, PartialEq, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
+	pub struct Restaurant;
+
+	/// A rider record registered on-chain (extensible; currently a marker type).
+	#[derive(Encode, Decode, Clone, Copy, PartialEq, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
+	pub struct Rider;
+
 	/// A proof-of-existence claim: who created it and when.
 	#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 	#[scale_info(skip_type_params(T))]
@@ -65,6 +73,14 @@ pub mod pallet {
 	/// Registered customers: one entry per account.
 	#[pallet::storage]
 	pub type Customers<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, Customer, OptionQuery>;
+
+	/// Registered restaurants: one entry per operator account.
+	#[pallet::storage]
+	pub type Restaurants<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, Restaurant, OptionQuery>;
+
+	/// Registered riders (delivery): one entry per account.
+	#[pallet::storage]
+	pub type Riders<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, Rider, OptionQuery>;
 
 	/// Events emitted by this pallet.
 	#[pallet::event]
@@ -89,6 +105,16 @@ pub mod pallet {
 			/// The account registered as a customer.
 			who: T::AccountId,
 		},
+		/// A new restaurant was registered.
+		RestaurantCreated {
+			/// The account registered as a restaurant operator.
+			who: T::AccountId,
+		},
+		/// A new rider was registered.
+		RiderCreated {
+			/// The account registered as a rider.
+			who: T::AccountId,
+		},
 	}
 
 	/// Errors that can occur in this pallet.
@@ -102,6 +128,10 @@ pub mod pallet {
 		ClaimNotFound,
 		/// This account is already registered as a customer.
 		AlreadyCustomer,
+		/// This account is already registered as a restaurant operator.
+		AlreadyRestaurant,
+		/// This account is already registered as a rider.
+		AlreadyRider,
 	}
 
 	/// Dispatchable calls.
@@ -144,6 +174,28 @@ pub mod pallet {
 			ensure!(!Customers::<T>::contains_key(&who), Error::<T>::AlreadyCustomer);
 			Customers::<T>::insert(&who, Customer);
 			Self::deposit_event(Event::CustomerCreated { who });
+			Ok(())
+		}
+
+		/// Register the caller as a restaurant operator.
+		#[pallet::call_index(3)]
+		#[pallet::weight(T::WeightInfo::create_restaurant())]
+		pub fn create_restaurant(origin: OriginFor<T>) -> DispatchResult {
+			let who = ensure_signed(origin)?;
+			ensure!(!Restaurants::<T>::contains_key(&who), Error::<T>::AlreadyRestaurant);
+			Restaurants::<T>::insert(&who, Restaurant);
+			Self::deposit_event(Event::RestaurantCreated { who });
+			Ok(())
+		}
+
+		/// Register the caller as a rider.
+		#[pallet::call_index(4)]
+		#[pallet::weight(T::WeightInfo::create_rider())]
+		pub fn create_rider(origin: OriginFor<T>) -> DispatchResult {
+			let who = ensure_signed(origin)?;
+			ensure!(!Riders::<T>::contains_key(&who), Error::<T>::AlreadyRider);
+			Riders::<T>::insert(&who, Rider);
+			Self::deposit_event(Event::RiderCreated { who });
 			Ok(())
 		}
 	}

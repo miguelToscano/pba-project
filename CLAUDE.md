@@ -4,7 +4,7 @@ This file provides context for AI agents working with this repository.
 
 ## Project Purpose
 
-A developer starter template for the **Polkadot Blockchain Academy** demonstrating the Polkadot stack through a **Proof of Existence** system — claim and revoke ownership of file hashes on-chain via a Substrate FRAME pallet, with a React frontend and Rust CLI.
+A developer starter template for the **Polkadot Blockchain Academy** demonstrating the Polkadot stack through a **Proof of Existence** system — claim and revoke ownership of file hashes on-chain via a Substrate FRAME pallet, with a React frontend.
 
 Students do not need to use every optional integration. Components are intentionally separated so teams can trim what they do not need.
 
@@ -15,15 +15,13 @@ Students do not need to use every optional integration. Components are intention
 | FRAME Pallet | `blockchain/pallets/template/` | Rust, FRAME, polkadot-sdk |
 | Parachain Runtime | `blockchain/runtime/` | Rust, Cumulus, pallet-revive (optional for `eth-rpc`) |
 | Frontend | `web/` | React 18, Vite, TypeScript, Tailwind, PAPI |
-| CLI | `cli/` | Rust, subxt, clap |
 | Scripts | `scripts/` | Bash (start, deploy, test helpers) |
 
 ## How the Layers Connect
 
 - The **pallet** is wired into the runtime at `pallet_index(50)` as `TemplatePallet`.
-- **pallet-revive** (index 90) remains in the runtime for Ethereum-compatible execution; the checked-in frontend and CLI focus on the **pallet** path.
+- **pallet-revive** (index 90) remains in the runtime for Ethereum-compatible execution; the checked-in frontend focuses on the **pallet** path.
 - The **frontend** talks to the pallet via **PAPI** over WebSocket.
-- The **CLI** uses **subxt** for Substrate RPC and pallet calls.
 - The local dev chain ID is `420420421`. The Polkadot Hub TestNet chain ID is `420420417`.
 
 ## Key Files
@@ -33,16 +31,13 @@ Students do not need to use every optional integration. Components are intention
 - `blockchain/runtime/src/configs/mod.rs` — All pallet configuration (System, Balances, Revive, etc.)
 - `blockchain/runtime/src/configs/xcm_config.rs` — XCM cross-chain messaging config
 - `web/src/pages/PalletPage.tsx` — Pallet PoE frontend page
-- `cli/src/commands/pallet.rs` — CLI pallet interaction commands
-- `cli/src/commands/prove.rs` — All-in-one prove command (hash + claim + optional extras)
-- `cli/src/commands/chain.rs` — CLI chain info, block subscription, Statement Store RPC
 - `scripts/common.sh` — Shared script utilities (port config, env setup)
 - `docs/INSTALL.md`, `docs/TOOLS.md`, `docs/DEPLOYMENT.md` — Setup, tooling, and deployment guides
 
 ## Build Commands
 
 ```bash
-# Rust (runtime + pallet + CLI)
+# Rust (runtime + pallet)
 cargo build --release
 
 # Frontend
@@ -55,7 +50,7 @@ cd web && npm ci && npm run build
 # Pallet unit tests
 cargo test -p pallet-template
 
-# All Rust tests (runtime + pallet + CLI)
+# All Rust tests (runtime + pallet)
 SKIP_PALLET_REVIVE_FIXTURES=1 cargo test --workspace --features runtime-benchmarks
 ```
 
@@ -103,9 +98,6 @@ docker compose down -v  # tear down
 
 # Deploy frontend
 ./scripts/deploy-frontend.sh
-
-# Statement Store smoke test
-./scripts/test-statement-store-smoke.sh
 ```
 
 ## Version Pinning
@@ -124,6 +116,6 @@ docker compose down -v  # tear down
 
 - **Runtime integration tests**: `blockchain/runtime/src/tests.rs` has only 1 compile-time API assertion test. Consider adding genesis-build smoke tests and pallet-integration tests.
 - **Shell script linting**: `scripts/` has ~1180 lines of bash with no linting in CI. A workflow running `shellcheck scripts/*.sh` would catch issues.
-- **E2E tests in CI**: `scripts/test-zombienet.sh` exists for local verification but is too heavy for CI (~15-25 min, requires Zombienet + binaries). Run locally before releases.
+- **E2E tests in CI**: Consider adding a dedicated Zombienet-based workflow (heavy: ~15-25 min, requires Zombienet + binaries); not checked in here.
 - **Docker eth-rpc image**: No official `parity/eth-rpc` Docker image exists. `docker/Dockerfile.eth-rpc` downloads the binary from GH releases as a workaround.
 - **Commit message conventions**: Consider adopting Conventional Commits for clearer changelog generation.

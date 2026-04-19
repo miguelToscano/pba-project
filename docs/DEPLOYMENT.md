@@ -196,14 +196,6 @@ The allowance is temporary and usually expires around 100,000 blocks later. Use 
 4. Then the hash is claimed on the parachain pallet
 5. The IPFS link appears in the claims list (verified via gateway HEAD request)
 
-**CLI:**
-```bash
-# Hash a file and upload to Bulletin Chain, then claim on pallet
-cargo run -p stack-cli -- pallet create-claim --file ./document.pdf --upload
-```
-
-The CLI connects to the Bulletin Chain via subxt and submits `TransactionStorage.store()`.
-
 **Notes:**
 - The authorized account must match the Substrate signer used for `TransactionStorage.store()`
 - On Bulletin Paseo, authorization is self-service through the site's `Faucet` page; this is a testing flow and may differ on other Bulletin deployments
@@ -211,35 +203,3 @@ The CLI connects to the Bulletin Chain via subxt and submits `TransactionStorage
 - Maximum 8 MiB per file
 - IPFS gateway: `https://paseo-ipfs.polkadot.io/ipfs/{cid}`
 
-## CLI
-
-### Signer options
-
-Write commands accept `--signer` (`-s`) which auto-detects Substrate dev names, mnemonics, or a `0x` secret seed.
-
-Default is `alice` if omitted.
-
-### Commands
-
-```bash
-# Chain info
-cargo run -p stack-cli -- chain info
-
-# Pallet interaction (via Substrate RPC)
-cargo run -p stack-cli -- pallet create-claim 0x0123...def                  # direct hash
-cargo run -p stack-cli -- pallet create-claim --file ./doc.pdf              # hash a file
-cargo run -p stack-cli -- pallet create-claim --file ./doc.pdf --upload     # hash + IPFS upload
-cargo run -p stack-cli -- pallet create-claim --file ./doc.pdf -s bob       # custom signer
-cargo run -p stack-cli -- pallet get-claim 0x0123...
-cargo run -p stack-cli -- pallet list-claims
-cargo run -p stack-cli -- pallet revoke-claim 0x0123... -s alice
-
-# All-in-one
-cargo run -p stack-cli -- prove --file ./doc.pdf --statement-store -s alice
-```
-
-Use `--url` to target another node:
-
-```bash
-cargo run -p stack-cli -- --url wss://your-node:9944 pallet list-claims
-```
