@@ -12,8 +12,6 @@ export default function App() {
 	const navItems = [
 		{ path: "/", label: "Home", enabled: true },
 		{ path: "/pallet", label: "Pallet PoE", enabled: pallets.templatePallet === true },
-		{ path: "/evm", label: "EVM PoE", enabled: pallets.revive === true },
-		{ path: "/pvm", label: "PVM PoE", enabled: pallets.revive === true },
 		{ path: "/statements", label: "Statements", enabled: true },
 		{ path: "/accounts", label: "Accounts", enabled: true },
 	];

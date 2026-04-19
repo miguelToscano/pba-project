@@ -5,7 +5,7 @@ This document describes all the parts of the Polkadot technology stack exposed b
 ## Required vs Optional
 
 - **Required for the smallest local demo**: Rust, `polkadot-omni-node`, the runtime, the pallet, and optionally the CLI.
-- **Required for contract examples**: add `eth-rpc`, `contracts/evm`, and/or `contracts/pvm`.
+- **Optional JSON-RPC tooling**: `eth-rpc` runs alongside the node if you attach standard Ethereum clients to `pallet-revive`.
 - **Required for the web app**: add `web/` plus the committed PAPI descriptors in `web/.papi/`.
 - **Optional extras**: Bulletin Chain (IPFS uploads), Spektr host integration, and DotNS deployment. These are isolated so students can remove them without touching the core PoE flows.
 
@@ -30,41 +30,34 @@ Statement Store is an omni-node feature for validating, storing, and gossiping s
 - **RPC methods**: `statement_submit`, `statement_dump`, plus the topic/key query variants
 - **Local status in this template**: Available in the repo's relay-backed Zombienet scripts; unavailable in omni-node dev mode on stable2512-3
 
-The full-feature local scripts generate a local relay-chain-backed spec and then start a Zombienet network (2 relay validators + 1 collator) using the active `STACK_PORT_OFFSET` / `STACK_*_PORT` settings. They wait until `statement_submit` appears in `rpc_methods`, so the Statement Store RPCs are actually present before contract deployment or frontend startup continues.
+The full-feature local scripts generate a local relay-chain-backed spec and then start a Zombienet network (2 relay validators + 1 collator) using the active `STACK_PORT_OFFSET` / `STACK_*_PORT` settings. They wait until `statement_submit` appears in `rpc_methods`, so the Statement Store RPCs are actually present before the scripted stack continues.
 
 The lighter solo-node tools (`start-dev.sh` and Docker Compose) use omni-node dev mode for a faster iteration loop. On `polkadot-sdk stable2512-3`, that dev path does not wire up Statement Store even if `--enable-statement-store` is passed.
 
 The current template integration is active in all three local entry points:
 
 - CLI: signed submission and dump flows via `stack-cli chain statement-submit` / `statement-dump`
-- Frontend: optional Statement Store submission on the pallet and contract claim pages
+- Frontend: optional Statement Store submission from the pallet page
 - Scripts: [`scripts/test-statement-store-smoke.sh`](../scripts/test-statement-store-smoke.sh) runs a relay-backed local submission and dump check
 
 ## pallet-revive (EVM + PVM)
 
-Enables both EVM and PolkaVM smart contract execution on the parachain. Contracts written in Solidity can be compiled to either target and deployed through the same Ethereum-compatible JSON-RPC interface.
+Enables EVM and PolkaVM smart contract execution on the parachain. This repository focuses on the FRAME pallet path; Solidity tooling is not vendored here.
 
-- **Version**: v0.12.2
-- **Compilers**: `solc` v0.8.28 (EVM bytecode), `resolc` v1.0.0 (PolkaVM/RISC-V bytecode)
-- **RPC**: eth-rpc adapter bridges Ethereum JSON-RPC to pallet-revive
-- **Used for**: `ProofOfExistence.sol` deployed to both EVM and PVM backends
-- **Source**: [`contracts/evm/`](../contracts/evm/), [`contracts/pvm/`](../contracts/pvm/)
-- **Docs**: [docs.polkadot.com/smart-contracts](https://docs.polkadot.com/smart-contracts/overview/)
+- **Version**: v0.12.2 (via runtime dependency)
+- **RPC**: `eth-rpc` bridges Ethereum JSON-RPC to pallet-revive when running the full stack scripts
+- **Docs**: [Polkadot smart contracts](https://docs.polkadot.com/smart-contracts/overview/)
 
-### How it works
+### Conceptual layout
 
 ```
-Solidity source (ProofOfExistence.sol)
-  ├── solc  → EVM bytecode  → pallet-revive (REVM backend)
-  └── resolc → PVM bytecode  → pallet-revive (PolkaVM backend)
-
-Frontend / CLI
-  → Ethereum JSON-RPC (eth_call, eth_sendTransaction)
-  → eth-rpc adapter (default: http://127.0.0.1:8545)
+Solidity / PolkaVM contracts (your project)
+  → Ethereum JSON-RPC
+  → eth-rpc adapter (default: http://127.0.0.1:8545 when using the scripts)
   → pallet-revive on the parachain
 ```
 
-Both targets use the same ABI, same tooling (Hardhat, viem, alloy), and the same frontend code. The only difference is the compiler and VM backend.
+Standard Ethereum tooling applies when you attach your own contracts to `eth-rpc`; this repo does not ship Solidity sources.
 
 ## Bulletin Chain (IPFS Storage)
 
@@ -89,7 +82,7 @@ This self-service faucet flow is specific to the current Bulletin Paseo/testing 
 
 1. Frontend computes blake2b-256 hash of the file
 2. (Optional) Upload file bytes to Bulletin Chain via `TransactionStorage.store()`
-3. Claim the hash on the parachain pallet or contract
+3. Claim the hash on the parachain pallet
 4. The IPFS link is reconstructed from the hash — resolves if the file was uploaded
 
 ## DotNS (Polkadot Naming System)
@@ -155,64 +148,6 @@ let tx = subxt::dynamic::tx("TemplatePallet", "create_claim", vec![("hash", Valu
 api.tx().sign_and_submit_then_watch_default(&tx, &signer).await?;
 ```
 
-## alloy
-
-The Rust library for interacting with Ethereum-compatible chains. Used by the CLI for EVM/PVM contract interaction through the eth-rpc adapter.
-
-- **Version**: 1.8
-- **Used for**: CLI contract commands (create-claim, revoke-claim, get-claim)
-- **Source**: [`cli/src/commands/contract.rs`](../cli/src/commands/contract.rs)
-- **Docs**: [alloy.rs](https://alloy.rs)
-
-### Key patterns
-
-```rust
-// Type-safe contract bindings via sol! macro
-sol! {
-    #[sol(rpc)]
-    contract ProofOfExistence {
-        function createClaim(bytes32 documentHash) external;
-        function getClaim(bytes32 documentHash) external view returns (address, uint256);
-    }
-}
-
-// Read
-let result = contract.getClaim(hash).call().await?;
-
-// Write (with signer)
-let provider = ProviderBuilder::new().wallet(wallet).connect_http(url);
-contract.createClaim(hash).send().await?.get_receipt().await?;
-```
-
-## viem
-
-The JavaScript library for interacting with Ethereum-compatible chains. Used by the frontend for EVM/PVM contract interaction and by Hardhat for testing and deployment.
-
-- **Version**: v2.x
-- **Used for**: Frontend contract pages (create/revoke claims, query claims), Hardhat tests and deploy scripts
-- **Source**: [`web/src/config/evm.ts`](../web/src/config/evm.ts), [`web/src/components/ContractProofOfExistencePage.tsx`](../web/src/components/ContractProofOfExistencePage.tsx)
-- **Docs**: [viem.sh](https://viem.sh)
-
-The frontend now exposes the Ethereum JSON-RPC endpoint on the home page, instead of hard-coding localhost. That keeps GitHub Pages/IPFS deployments usable against testnet contracts.
-
-## Hardhat
-
-The Ethereum development framework used for compiling, testing, and deploying Solidity contracts to both EVM and PVM targets.
-
-- **Version**: v2.27+
-- **Plugins**: `@nomicfoundation/hardhat-viem` (viem integration), `@parity/hardhat-polkadot` (PVM/resolc support), `@nomicfoundation/hardhat-verify` (Blockscout verification)
-- **Source**: [`contracts/evm/`](../contracts/evm/), [`contracts/pvm/`](../contracts/pvm/)
-- **Docs**: [hardhat.org](https://hardhat.org)
-
-### Commands
-
-```bash
-npx hardhat compile          # Compile contracts
-npx hardhat test             # Run tests (local Hardhat network)
-npm run deploy:local         # Deploy to local node via eth-rpc
-npm run deploy:testnet       # Deploy to Polkadot TestNet
-```
-
 ## Code Formatting & Linting
 
 Consistent formatting across all languages.
@@ -221,13 +156,11 @@ Consistent formatting across all languages.
 |---|---|---|
 | `rustfmt` (nightly) | Rust (blockchain/, cli/) | `rustfmt.toml` — matches polkadot-sdk style |
 | ESLint | TypeScript/React (web/) | `web/eslint.config.js` — typescript-eslint + react-hooks |
-| Prettier | TypeScript (web/) + Solidity + TS (contracts/) | `.prettierrc` (root) + `contracts/*/.prettierrc` (Solidity plugin) |
+| Prettier | TypeScript (web/) | `.prettierrc` (root) |
 
 ```bash
 cargo +nightly fmt && cargo clippy --workspace   # Rust
 cd web && npm run lint && npm run fmt             # Frontend
-cd contracts/evm && npm run fmt                   # EVM contracts
-cd contracts/pvm && npm run fmt                   # PVM contracts
 ```
 
 ## Polkadot Product SDK (Spektr)
@@ -238,7 +171,7 @@ The Nova Sama Technologies SDK for building products that run inside the Polkado
 - **Used for**: Spektr account detection and injection on the Accounts page
 - **Source**: [`web/src/pages/AccountsPage.tsx`](../web/src/pages/AccountsPage.tsx)
 
-This integration is optional. If you do not need host-injected wallets, you can remove the Accounts page without affecting the pallet or contract demos.
+This integration is optional. If you do not need host-injected wallets, you can remove the Accounts page without affecting the pallet demos.
 
 ### Host detection
 
@@ -266,7 +199,7 @@ The unified Substrate parachain node binary. Runs the compiled runtime WASM with
 The Ethereum JSON-RPC adapter for pallet-revive. Translates standard Ethereum RPC calls (eth_call, eth_sendTransaction, etc.) into Substrate extrinsics.
 
 - **Version**: v0.12.0
-- **Used for**: Bridging Ethereum tooling (MetaMask, Hardhat, viem, alloy) to the parachain
+- **Used for**: Bridging standard Ethereum JSON-RPC clients to pallet-revive when you run contract workloads against the node
 - **Endpoint**: `http://127.0.0.1:8545` by default for local dev, or `https://services.polkadothub-rpc.com/testnet` (Polkadot Hub TestNet)
 - **Download**: [polkadot-sdk releases](https://github.com/paritytech/polkadot-sdk/releases/tag/polkadot-stable2512-3)
 

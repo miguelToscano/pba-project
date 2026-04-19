@@ -57,32 +57,22 @@ validate_full_external_toolchain
 # -----------------------------------------------------------------------
 # Setup
 # -----------------------------------------------------------------------
-echo "[1/7] Building runtime and CLI..."
+echo "[1/5] Building runtime and CLI..."
 build_runtime
 cargo build -p stack-cli --release
 
-echo "[2/7] Generating chain spec..."
+echo "[2/5] Generating chain spec..."
 generate_chain_spec
 
-echo "[3/7] Compiling contracts..."
-cd "$ROOT_DIR/contracts/evm" && npm install --silent && npx hardhat compile
-cd "$ROOT_DIR/contracts/pvm" && npm install --silent && npx hardhat compile
-cd "$ROOT_DIR"
-
-echo "[4/7] Starting Zombienet..."
+echo "[3/5] Starting Zombienet..."
 start_zombienet_background
 wait_for_substrate_rpc
 
-echo "[5/7] Starting eth-rpc adapter..."
+echo "[4/5] Starting eth-rpc adapter..."
 start_eth_rpc_background
 wait_for_eth_rpc
 
-echo "[6/7] Deploying contracts..."
-cd "$ROOT_DIR/contracts/evm" && npm run deploy:local
-cd "$ROOT_DIR/contracts/pvm" && npm run deploy:local
-cd "$ROOT_DIR"
-
-echo "[7/7] Running tests..."
+echo "[5/5] Running tests..."
 echo ""
 
 # -----------------------------------------------------------------------
@@ -133,50 +123,6 @@ if [ -n "$PALLET_HASH" ]; then
     # Verify revoked
     GET_AFTER="$($CLI --url "$WS_URL" pallet get-claim "$PALLET_HASH" 2>&1)"
     check "pallet claim gone after revoke" grep -q "No claim found" <<<"$GET_AFTER"
-fi
-
-# -----------------------------------------------------------------------
-# Test: EVM Contract PoE
-# -----------------------------------------------------------------------
-echo "--- EVM Contract PoE ---"
-
-EVM_FILE="$TMP_DIR/evm-test.txt"
-echo "evm-poe-test-$(date +%s)" >"$EVM_FILE"
-
-EVM_CREATE="$($CLI --url "$WS_URL" --eth-rpc-url "$ETH_URL" contract create-claim evm --file "$EVM_FILE" -s alice 2>&1)"
-EVM_HASH="$(grep -oE '0x[0-9a-f]{64}' <<<"$EVM_CREATE" | head -1)"
-
-if [ -n "$EVM_HASH" ]; then
-    pass "evm contract create-claim"
-else
-    fail "evm contract create-claim (could not extract hash)"
-fi
-
-if [ -n "$EVM_HASH" ]; then
-    EVM_GET="$($CLI --url "$WS_URL" --eth-rpc-url "$ETH_URL" contract get-claim evm "$EVM_HASH" 2>&1)"
-    check "evm contract get-claim finds owner" grep -q "Owner" <<<"$EVM_GET"
-fi
-
-# -----------------------------------------------------------------------
-# Test: PVM Contract PoE
-# -----------------------------------------------------------------------
-echo "--- PVM Contract PoE ---"
-
-PVM_FILE="$TMP_DIR/pvm-test.txt"
-echo "pvm-poe-test-$(date +%s)" >"$PVM_FILE"
-
-PVM_CREATE="$($CLI --url "$WS_URL" --eth-rpc-url "$ETH_URL" contract create-claim pvm --file "$PVM_FILE" -s alice 2>&1)"
-PVM_HASH="$(grep -oE '0x[0-9a-f]{64}' <<<"$PVM_CREATE" | head -1)"
-
-if [ -n "$PVM_HASH" ]; then
-    pass "pvm contract create-claim"
-else
-    fail "pvm contract create-claim (could not extract hash)"
-fi
-
-if [ -n "$PVM_HASH" ]; then
-    PVM_GET="$($CLI --url "$WS_URL" --eth-rpc-url "$ETH_URL" contract get-claim pvm "$PVM_HASH" 2>&1)"
-    check "pvm contract get-claim finds owner" grep -q "Owner" <<<"$PVM_GET"
 fi
 
 # -----------------------------------------------------------------------
@@ -261,14 +207,8 @@ echo "--- Prove command ---"
 PROVE_FILE="$TMP_DIR/prove-test.txt"
 echo "prove-e2e-$(date +%s)" >"$PROVE_FILE"
 
-PROVE_OUT="$($CLI --url "$WS_URL" --eth-rpc-url "$ETH_URL" prove --file "$PROVE_FILE" --statement-store -s alice 2>&1)"
+PROVE_OUT="$($CLI --url "$WS_URL" prove --file "$PROVE_FILE" --statement-store -s alice 2>&1)"
 check "prove command succeeds" grep -q "finalized" <<<"$PROVE_OUT"
-
-PROVE_CONTRACT_FILE="$TMP_DIR/prove-contract-test.txt"
-echo "prove-contract-e2e-$(date +%s)" >"$PROVE_CONTRACT_FILE"
-
-PROVE_EVM_OUT="$($CLI --url "$WS_URL" --eth-rpc-url "$ETH_URL" prove --file "$PROVE_CONTRACT_FILE" --contract evm -s alice 2>&1)"
-check "prove --contract evm succeeds" grep -q "Confirmed in block" <<<"$PROVE_EVM_OUT"
 
 # -----------------------------------------------------------------------
 # Results

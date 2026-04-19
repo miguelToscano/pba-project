@@ -8,15 +8,12 @@ The app uses:
 
 - React + Vite + TypeScript + Tailwind CSS
 - [Polkadot API (PAPI)](https://papi.how/) for pallet interaction
-- [viem](https://viem.sh/) for EVM and PVM contract interaction through `eth-rpc`
 - Zustand for state management
 
 Key pages include:
 
 - Home
 - Pallet Proof of Existence
-- EVM Proof of Existence
-- PVM Proof of Existence
 - Statements
 - Accounts
 
@@ -38,7 +35,7 @@ Or, from the repo root, if the chain is already running and you want the scripte
 
 ## Endpoint Configuration
 
-The app uses configurable Substrate WebSocket and Ethereum JSON-RPC endpoints.
+The app uses a configurable Substrate WebSocket endpoint.
 
 For hosted builds:
 
@@ -49,12 +46,10 @@ cp web/.env.example web/.env.local
 Set:
 
 - `VITE_WS_URL`
-- `VITE_ETH_RPC_URL`
 
 For local scripted development, [`../scripts/start-all.sh`](../scripts/start-all.sh) and [`../scripts/start-frontend.sh`](../scripts/start-frontend.sh) export:
 
 - `VITE_LOCAL_WS_URL`
-- `VITE_LOCAL_ETH_RPC_URL`
 
 That keeps the browser aligned with the active local stack ports.
 
@@ -73,8 +68,4 @@ npm run lint
 npm run fmt
 ```
 
-## Deployment Data
-
-The frontend keeps [`src/config/deployments.ts`](src/config/deployments.ts) checked in as a stub so a fresh clone still works. Contract deploy scripts update that file automatically after successful deployment.
-
-See [`../contracts/README.md`](../contracts/README.md) for contract deployment flows and [`../docs/DEPLOYMENT.md`](../docs/DEPLOYMENT.md) for hosted frontend deployment options.
+See [`../docs/DEPLOYMENT.md`](../docs/DEPLOYMENT.md) for hosted frontend deployment options.

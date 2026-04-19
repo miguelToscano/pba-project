@@ -8,12 +8,10 @@ If you have **Docker** and **Node.js 22**, you can skip all the Rust/binary setu
 
 ```bash
 docker compose up -d          # builds the runtime in Docker (~10-20 min first time)
-cd contracts/evm && npm install && npm run deploy:local
-cd ../pvm && npm install && npm run deploy:local
-cd ../../web && npm install && npm run dev
+cd web && npm install && npm run dev
 ```
 
-This starts the parachain node (port 9944) and Ethereum RPC adapter (port 8545) in Docker. Contracts and frontend run on the host. See the root `docker-compose.yml` for details.
+This starts the parachain node (port 9944) and Ethereum RPC adapter (port 8545) in Docker. Run the frontend on the host. See the root `docker-compose.yml` for details.
 
 If you prefer to install everything natively (faster iteration, required for runtime development), continue below.
 
@@ -186,36 +184,12 @@ npm run fmt:check     # check only
 npm run lint          # ESLint
 ```
 
-**Contracts:**
-```bash
-cd contracts/evm && npm run fmt     # format Solidity + TypeScript
-cd contracts/pvm && npm run fmt     # format Solidity + TypeScript
-```
-
-### Compile Solidity Contracts
-
-**EVM (solc):**
-```bash
-cd contracts/evm
-npm install
-npx hardhat compile
-```
-
-**PVM (resolc):**
-```bash
-cd contracts/pvm
-npm install
-npx hardhat compile
-```
-
 ### Install Frontend Dependencies
 
 ```bash
 cd web
 npm install
 ```
-
-The repo keeps `web/src/config/deployments.ts` as a checked-in stub so the frontend works in a fresh clone. Contract deploy scripts update that file and the root `deployments.json` automatically.
 
 ## Running Locally
 
@@ -225,7 +199,7 @@ The repo keeps `web/src/config/deployments.ts` as a checked-in stub so the front
 ./scripts/start-all.sh
 ```
 
-This builds the runtime, generates a chain spec, starts the local Zombienet relay-chain + collator network, starts the eth-rpc adapter, compiles and deploys both contracts, and starts the frontend — all in one command.
+This builds the runtime, generates a chain spec, starts the local Zombienet relay-chain + collator network, starts the eth-rpc adapter, builds the CLI, and starts the frontend — all in one command.
 
 - **Substrate RPC**: `ws://127.0.0.1:9944` by default
 - **Ethereum RPC**: `http://127.0.0.1:8545` by default (via eth-rpc adapter)
@@ -267,48 +241,15 @@ The repo ships two local modes:
 cargo run -p stack-cli -- chain info
 cargo run -p stack-cli -- pallet create-claim --file ./README.md
 cargo run -p stack-cli -- pallet list-claims
-cargo run -p stack-cli -- contract create-claim evm --file ./README.md
 ```
 
 The CLI is part of the Rust workspace, so `cargo run -p stack-cli -- ...` works from the repo root.
 
-When you launch the local stack through the scripts, the CLI also picks up `SUBSTRATE_RPC_WS` and `ETH_RPC_HTTP` from the environment automatically. You can still pass `--url` and `--eth-rpc-url` explicitly when you want to target another chain.
+When you launch the local stack through the scripts, the CLI picks up `SUBSTRATE_RPC_WS` from the environment automatically. You can still pass `--url` explicitly when you want to target another chain.
 
-## Deploying to Polkadot TestNet
+## Polkadot Hub TestNet
 
-Target: **Polkadot Hub TestNet** (Chain ID: `420420417`)
-
-RPC endpoint: `https://services.polkadothub-rpc.com/testnet`
-
-Get testnet tokens: https://faucet.polkadot.io/
-
-### Set your private key
-
-```bash
-cd contracts/evm && npx hardhat vars set PRIVATE_KEY
-cd contracts/pvm && npx hardhat vars set PRIVATE_KEY
-```
-
-### Deploy
-
-```bash
-# EVM
-cd contracts/evm
-npm run deploy:testnet
-
-# PVM
-cd contracts/pvm
-npm run deploy:testnet
-```
-
-Both commands update `deployments.json` and `web/src/config/deployments.ts` so the CLI and frontend stay in sync.
-
-### Verify on Blockscout
-
-```bash
-cd contracts/evm
-npx hardhat verify --network polkadotTestnet DEPLOYED_CONTRACT_ADDRESS
-```
+For interacting with **Polkadot Hub TestNet** (Chain ID `420420417`), use the RPC endpoint `https://services.polkadothub-rpc.com/testnet` and [the faucet](https://faucet.polkadot.io/) for tokens. This repository focuses on the pallet + local scripts; deploy any additional smart-contract tooling against TestNet following [Polkadot smart contracts](https://docs.polkadot.com/smart-contracts/overview/).
 
 ## Troubleshooting
 

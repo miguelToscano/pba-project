@@ -31,11 +31,6 @@ chain_data/
 # PAPI generated (committed so frontend works out of the box)
 # Regenerate with: cd web && npx papi update && npx papi
 
-# Hardhat
-contracts/*/cache/
-contracts/*/artifacts/
-contracts/*/typechain-types/
-contracts/*/ignition/deployments/
 **/chain_spec.json
 
 # Polkadot SDK binaries (downloaded by scripts into repo-local bin/)

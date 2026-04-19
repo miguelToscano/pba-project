@@ -77,50 +77,11 @@ cd web && npm install && npm run build
 
 Upload `web/dist/` to Vercel, Netlify, Cloudflare Pages, S3, or any static file server.
 
-## Smart Contract Deployment
+## Smart contracts
 
-### Local dev node
+This template no longer includes Solidity projects under `contracts/`. Use the **FRAME pallet** flow and `./scripts/start-all.sh` for the full local stack (relay-backed network, `eth-rpc`, CLI build, frontend). `eth-rpc` remains available if you attach other Ethereum tooling to the node.
 
-The quickest way to get everything running (node, contracts, and frontend):
-
-```bash
-./scripts/start-all.sh
-```
-
-Or deploy contracts manually against a running node:
-
-```bash
-# Start node (terminal 1)
-./scripts/start-dev.sh
-
-# Start eth-rpc against the local node (terminal 2)
-eth-rpc --node-rpc-url "${SUBSTRATE_RPC_WS:-ws://127.0.0.1:9944}" --rpc-port "${STACK_ETH_RPC_PORT:-8545}" --rpc-cors all
-
-# Deploy contracts (terminal 3)
-cd contracts/evm && npm install && npm run deploy:local
-cd contracts/pvm && npm install && npm run deploy:local
-```
-
-Deploy scripts automatically write contract addresses to `deployments.json` (for CLI) and `web/src/config/deployments.ts` (for frontend). The frontend contract pages auto-populate the address field from those shared files.
-
-### Polkadot TestNet
-
-```bash
-# Set your private key in each contract directory
-cd contracts/evm && npx hardhat vars set PRIVATE_KEY
-cd contracts/pvm && npx hardhat vars set PRIVATE_KEY
-
-# Get testnet tokens
-# Visit: https://faucet.polkadot.io/
-
-# Deploy both contracts
-./scripts/deploy-paseo.sh
-```
-
-TestNet details:
-- **RPC**: `https://services.polkadothub-rpc.com/testnet`
-- **Chain ID**: `420420417`
-- **Explorer**: [blockscout-testnet.polkadot.io](https://blockscout-testnet.polkadot.io/)
+For Polkadot smart-contract documentation and newer examples, see [Polkadot smart contracts](https://docs.polkadot.com/smart-contracts/overview/).
 
 ## Parachain Runtime
 
@@ -232,21 +193,16 @@ The allowance is temporary and usually expires around 100,000 blocks later. Use 
 1. Toggle "Upload to IPFS (via Bulletin Chain)" in the file drop zone
 2. The frontend checks account authorization via PAPI
 3. File bytes are uploaded via `TransactionStorage.store()`
-4. Then the hash is claimed on the parachain/contract
+4. Then the hash is claimed on the parachain pallet
 5. The IPFS link appears in the claims list (verified via gateway HEAD request)
 
 **CLI:**
 ```bash
 # Hash a file and upload to Bulletin Chain, then claim on pallet
 cargo run -p stack-cli -- pallet create-claim --file ./document.pdf --upload
-
-# Same for contracts
-cargo run -p stack-cli -- contract create-claim evm --file ./document.pdf --upload
 ```
 
 The CLI connects to the Bulletin Chain via subxt and submits `TransactionStorage.store()`.
-
-For contract commands, `--upload` uses a Substrate signer for the Bulletin Chain and an Ethereum signer for the contract call. If you use a raw Ethereum private key with `--signer`, also pass `--bulletin-signer` explicitly.
 
 **Notes:**
 - The authorized account must match the Substrate signer used for `TransactionStorage.store()`
@@ -257,22 +213,9 @@ For contract commands, `--upload` uses a Substrate signer for the Bulletin Chain
 
 ## CLI
 
-The CLI reads contract addresses from `deployments.json` in the project root. After deploying contracts, it works immediately.
-
 ### Signer options
 
-All write commands accept `--signer` (`-s`) which auto-detects the format:
-
-```bash
-# Pallet commands
---signer alice                              # dev account name
---signer "bottom drive obey lake ..."       # mnemonic phrase
---signer 0x5fb92d6e98884f76de468fa3f...     # raw secret seed
-
-# Contract commands
---signer alice                              # dev account name
---signer 0x5fb92d6e98884f76de468fa3f...     # raw Ethereum private key
-```
+Write commands accept `--signer` (`-s`) which auto-detects Substrate dev names, mnemonics, or a `0x` secret seed.
 
 Default is `alice` if omitted.
 
@@ -291,18 +234,12 @@ cargo run -p stack-cli -- pallet get-claim 0x0123...
 cargo run -p stack-cli -- pallet list-claims
 cargo run -p stack-cli -- pallet revoke-claim 0x0123... -s alice
 
-# Contract interaction (via eth-rpc)
-cargo run -p stack-cli -- contract info
-cargo run -p stack-cli -- contract create-claim evm 0x0123...               # direct hash
-cargo run -p stack-cli -- contract create-claim evm --file ./doc.pdf        # hash a file
-cargo run -p stack-cli -- contract create-claim pvm --file ./doc.pdf --upload -s bob
-cargo run -p stack-cli -- contract create-claim evm --file ./doc.pdf --upload --signer 0x... --bulletin-signer alice
-cargo run -p stack-cli -- contract get-claim evm 0x0123...
-cargo run -p stack-cli -- contract revoke-claim pvm 0x0123... -s bob
+# All-in-one
+cargo run -p stack-cli -- prove --file ./doc.pdf --statement-store -s alice
 ```
 
-Use `--url` and `--eth-rpc-url` flags to target different endpoints:
+Use `--url` to target another node:
 
 ```bash
-cargo run -p stack-cli -- --url wss://your-node:9944 --eth-rpc-url https://your-eth-rpc:8545 contract get-claim evm 0x0123...
+cargo run -p stack-cli -- --url wss://your-node:9944 pallet list-claims
 ```

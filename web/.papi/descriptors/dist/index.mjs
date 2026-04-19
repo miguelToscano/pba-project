@@ -23,7 +23,7 @@ var extensions = {};
 var getMetadata = () => import("./stack_template_metadata-VR46LRFX.mjs").then(
   (module) => toBinary("default" in module ? module.default : module)
 );
-var genesis = "0x4545454545454545454545454545454545454545454545454545454545454545";
+var genesis = "0x39bd603b71b2ad4e1813470553a2bec0676ad4c1df071f57e1da1ab7f12c065b";
 var _allDescriptors = { descriptors: descriptorValues, metadataTypes, asset, extensions, getMetadata, genesis };
 var stack_template_default = _allDescriptors;
 
@@ -95,7 +95,7 @@ var XcmVersionedAsset = _Enum;
 
 // .papi/descriptors/src/index.ts
 var metadatas = {
-  ["0x5d82548ee8362ca123514269ea6df6f1ad252e4f120516b810bcb2cb29957eb8"]: stack_template_default,
+  ["0xc2b2704ae946872aca98e44fab51a2d65d266d7b5469522907ea84e4c405a6e8"]: stack_template_default,
   ["0x1a82e5143be3211ded412b0368b486ce83bd41a80ec95eb267f6c204adda8365"]: bulletin_default
 };
 var getMetadata3 = async (codeHash) => {

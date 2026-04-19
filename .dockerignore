@@ -6,7 +6,6 @@ dist/
 .git/
 chain_data/
 web/
-contracts/
 scripts/
 .github/
 .vscode/

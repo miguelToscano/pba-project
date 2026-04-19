@@ -30,7 +30,7 @@ export function useConnection() {
 			setWsUrl(url);
 			setConnected(false);
 			setBlockNumber(0);
-			setPallets({ templatePallet: null, revive: null });
+			setPallets({ templatePallet: null });
 
 			disconnectClient();
 
@@ -49,20 +49,13 @@ export function useConnection() {
 				setConnected(true);
 
 				const api = client.getTypedApi(descriptor);
-				const detected = { templatePallet: false, revive: false };
+				const detected = { templatePallet: false };
 
 				try {
 					await api.query.TemplatePallet.Claims.getEntries();
 					detected.templatePallet = true;
 				} catch {
 					detected.templatePallet = false;
-				}
-
-				try {
-					await api.constants.Revive.DepositPerByte();
-					detected.revive = true;
-				} catch {
-					detected.revive = false;
 				}
 
 				if (connectId !== id) return { ok: false, chain: null };
@@ -72,7 +65,7 @@ export function useConnection() {
 				if (connectId !== id) return { ok: false, chain: null };
 				setConnected(false);
 				setBlockNumber(0);
-				setPallets({ templatePallet: false, revive: false });
+				setPallets({ templatePallet: false });
 				throw e;
 			}
 		},

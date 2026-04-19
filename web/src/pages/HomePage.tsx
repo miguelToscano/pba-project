@@ -2,18 +2,12 @@ import { useEffect, useState } from "react";
 import { useChainStore } from "../store/chainStore";
 import { useConnection } from "../hooks/useConnection";
 import { getClient } from "../hooks/useChain";
-import {
-	LOCAL_ETH_RPC_URL,
-	LOCAL_WS_URL,
-	getNetworkPresetEndpoints,
-	type NetworkPreset,
-} from "../config/network";
+import { LOCAL_WS_URL, getNetworkPresetEndpoints, type NetworkPreset } from "../config/network";
 
 export default function HomePage() {
-	const { wsUrl, ethRpcUrl, setEthRpcUrl, connected, blockNumber, pallets } = useChainStore();
+	const { wsUrl, connected, blockNumber, pallets } = useChainStore();
 	const { connect } = useConnection();
 	const [urlInput, setUrlInput] = useState(wsUrl);
-	const [ethRpcInput, setEthRpcInput] = useState(ethRpcUrl);
 	const [error, setError] = useState<string | null>(null);
 	const [chainName, setChainName] = useState<string | null>(null);
 	const [connecting, setConnecting] = useState(false);
@@ -21,10 +15,6 @@ export default function HomePage() {
 	useEffect(() => {
 		setUrlInput(wsUrl);
 	}, [wsUrl]);
-
-	useEffect(() => {
-		setEthRpcInput(ethRpcUrl);
-	}, [ethRpcUrl]);
 
 	useEffect(() => {
 		if (!connected) {
@@ -57,8 +47,6 @@ export default function HomePage() {
 	function applyPreset(preset: NetworkPreset) {
 		const endpoints = getNetworkPresetEndpoints(preset);
 		setUrlInput(endpoints.wsUrl);
-		setEthRpcInput(endpoints.ethRpcUrl);
-		setEthRpcUrl(endpoints.ethRpcUrl);
 	}
 
 	return (
@@ -72,9 +60,8 @@ export default function HomePage() {
 					</span>
 				</h1>
 				<p className="text-text-secondary text-base leading-relaxed max-w-2xl">
-					A developer starter template demonstrating Proof of Existence implemented three
-					ways: as a Substrate pallet, a Solidity EVM contract, and a PVM contract. Drop a
-					file to claim its hash on-chain.
+					A developer starter template demonstrating Proof of Existence using a Substrate
+					FRAME pallet. Drop a file to claim its hash on-chain.
 				</p>
 			</div>
 
@@ -113,23 +100,6 @@ export default function HomePage() {
 					</div>
 				</div>
 
-				<div>
-					<label className="label">Ethereum JSON-RPC Endpoint</label>
-					<input
-						type="text"
-						value={ethRpcInput}
-						onChange={(e) => {
-							setEthRpcInput(e.target.value);
-							setEthRpcUrl(e.target.value);
-						}}
-						placeholder={LOCAL_ETH_RPC_URL}
-						className="input-field w-full"
-					/>
-					<p className="text-xs text-text-muted mt-2">
-						Used by the EVM and PVM contract pages.
-					</p>
-				</div>
-
 				{/* Status grid */}
 				<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 					<StatusItem label="Chain Status">
@@ -155,8 +125,8 @@ export default function HomePage() {
 				</div>
 			</div>
 
-			{/* Feature cards */}
-			<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+			{/* Feature card */}
+			<div className="max-w-xl">
 				<FeatureCard
 					title="Pallet PoE"
 					description="Claim file hashes via the Substrate FRAME pallet using PAPI."
@@ -165,24 +135,6 @@ export default function HomePage() {
 					borderColor="hover:border-accent-blue/20"
 					available={pallets.templatePallet}
 					unavailableReason="TemplatePallet not found in connected runtime"
-				/>
-				<FeatureCard
-					title="EVM PoE (solc)"
-					description="Same proof of existence via Solidity compiled with solc, deployed to the EVM backend."
-					link="/evm"
-					accentColor="text-accent-purple"
-					borderColor="hover:border-accent-purple/20"
-					available={pallets.revive}
-					unavailableReason="pallet-revive not found in connected runtime"
-				/>
-				<FeatureCard
-					title="PVM PoE (resolc)"
-					description="Same Solidity contract compiled with resolc to PolkaVM bytecode, deployed via pallet-revive."
-					link="/pvm"
-					accentColor="text-accent-green"
-					borderColor="hover:border-accent-green/20"
-					available={pallets.revive}
-					unavailableReason="pallet-revive not found in connected runtime"
 				/>
 			</div>
 		</div>

@@ -10,9 +10,7 @@
 #   Substrate RPC:  ws://127.0.0.1:9944
 #   Ethereum RPC:   http://127.0.0.1:8545
 #
-# Then deploy contracts and start the frontend on the host:
-#   cd contracts/evm && npm install && npm run deploy:local
-#   cd contracts/pvm && npm install && npm run deploy:local
+# Then start the frontend on the host:
 #   cd web && npm install && npm run dev
 #
 # Tear down:

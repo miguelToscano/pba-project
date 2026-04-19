@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useChainStore } from "../store/chainStore";
 import { devAccounts } from "../hooks/useAccount";
-import { evmDevAccounts } from "../config/evm";
 import { getClient } from "../hooks/useChain";
 import { stack_template } from "@polkadot-api/descriptors";
 import { formatDispatchError } from "../utils/format";
@@ -105,10 +104,10 @@ export default function AccountsPage() {
 	const [accountInfos, setAccountInfos] = useState<Record<string, AccountInfo>>({});
 
 	// Build dev account display list
-	const devDisplayAccounts: DisplayAccount[] = devAccounts.map((acc, i) => ({
+	const devDisplayAccounts: DisplayAccount[] = devAccounts.map((acc) => ({
 		name: acc.name,
 		ss58: acc.address,
-		eth: evmDevAccounts[i]?.account.address ?? ss58ToH160(acc.address),
+		eth: ss58ToH160(acc.address),
 		type: "dev",
 	}));
 

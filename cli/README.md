@@ -1,9 +1,6 @@
 # CLI
 
-This directory contains `stack-cli`, the Rust command-line tool for interacting with the template chain through:
-
-- [subxt](https://github.com/parity-tech/subxt) for Substrate RPC
-- [alloy](https://alloy.rs) for Ethereum-compatible contract calls
+This directory contains `stack-cli`, the Rust command-line tool for interacting with the template chain through [subxt](https://github.com/parity-tech/subxt).
 
 ## Run It
 
@@ -16,8 +13,8 @@ cargo run -p stack-cli -- --help
 ## Command Groups
 
 - `pallet`: `create-claim`, `revoke-claim`, `get-claim`, `list-claims`
-- `contract`: `create-claim <evm|pvm>`, `revoke-claim`, `get-claim`, `info`
 - `chain`: `info`, `blocks`, `statement-submit`, `statement-dump`
+- `prove`: all-in-one — hash a file, submit a pallet claim, optionally Statement Store / Bulletin integration
 
 ## Examples
 
@@ -35,24 +32,12 @@ cargo run -p stack-cli -- pallet list-claims
 cargo run -p stack-cli -- chain statement-submit --file ./README.md --signer alice
 cargo run -p stack-cli -- chain statement-dump
 
-# Contract interaction
-cargo run -p stack-cli -- contract create-claim evm --file ./README.md
-cargo run -p stack-cli -- contract info
+# Combined flow (file hash + pallet claim + optional extras)
+cargo run -p stack-cli -- prove --file ./README.md --statement-store -s alice
 ```
 
 ## Signers
 
-- Pallet commands accept dev names, mnemonic phrases, or `0x` secret seeds.
-- Contract commands accept dev names or `0x` Ethereum private keys.
+Commands accept Substrate-side dev names (`alice`, `bob`, …), mnemonic phrases, or `0x` sr25519 secret seeds.
 
-## Contract Address Loading
-
-After contract deployment, the CLI reads addresses from the repo-root `deployments.json`. The contract deploy scripts keep that file in sync with [`../web/src/config/deployments.ts`](../web/src/config/deployments.ts).
-
-## Bulletin Chain Uploads
-
-Passing `--upload` uploads file bytes through `TransactionStorage.store()` before claiming the hash.
-
-When using a raw Ethereum private key for contract commands, also pass `--bulletin-signer` for the Substrate-side Bulletin upload signer.
-
-See [`../contracts/README.md`](../contracts/README.md) for deployment flow details and [`../docs/DEPLOYMENT.md`](../docs/DEPLOYMENT.md) for broader CLI examples.
+See [`../docs/DEPLOYMENT.md`](../docs/DEPLOYMENT.md) for broader CLI and deployment examples.
