@@ -1,8 +1,23 @@
 import { StrictMode, Suspense, lazy } from "react";
 import { createRoot } from "react-dom/client";
 import { HashRouter, Routes, Route } from "react-router-dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { LunoKitProvider } from "@luno-kit/ui";
 import App from "./App";
+import { injectLunoUiStyles } from "./setupLunoUiStyles";
+import WalletGate from "./components/WalletGate";
+import { lunokitConfig } from "./config/lunokit";
 import "./index.css";
+
+injectLunoUiStyles();
+
+const queryClient = new QueryClient({
+	defaultOptions: {
+		queries: {
+			refetchOnWindowFocus: false,
+		},
+	},
+});
 
 const HomePage = lazy(() => import("./pages/HomePage"));
 const PalletPage = lazy(() => import("./pages/PalletPage"));
@@ -18,43 +33,49 @@ const routeFallback = (
 
 createRoot(document.getElementById("root")!).render(
 	<StrictMode>
-		<HashRouter>
-			<Routes>
-				<Route element={<App />}>
-					<Route
-						index
-						element={
-							<Suspense fallback={routeFallback}>
-								<HomePage />
-							</Suspense>
-						}
-					/>
-					<Route
-						path="pallet"
-						element={
-							<Suspense fallback={routeFallback}>
-								<PalletPage />
-							</Suspense>
-						}
-					/>
-					<Route
-						path="accounts"
-						element={
-							<Suspense fallback={routeFallback}>
-								<AccountsPage />
-							</Suspense>
-						}
-					/>
-					<Route
-						path="statements"
-						element={
-							<Suspense fallback={routeFallback}>
-								<StatementStorePage />
-							</Suspense>
-						}
-					/>
-				</Route>
-			</Routes>
-		</HashRouter>
+		<QueryClientProvider client={queryClient}>
+			<LunoKitProvider config={lunokitConfig}>
+				<HashRouter>
+					<Routes>
+						<Route element={<WalletGate />}>
+							<Route element={<App />}>
+								<Route
+									index
+									element={
+										<Suspense fallback={routeFallback}>
+											<HomePage />
+										</Suspense>
+									}
+								/>
+								<Route
+									path="pallet"
+									element={
+										<Suspense fallback={routeFallback}>
+											<PalletPage />
+										</Suspense>
+									}
+								/>
+								<Route
+									path="accounts"
+									element={
+										<Suspense fallback={routeFallback}>
+											<AccountsPage />
+										</Suspense>
+									}
+								/>
+								<Route
+									path="statements"
+									element={
+										<Suspense fallback={routeFallback}>
+											<StatementStorePage />
+										</Suspense>
+									}
+								/>
+							</Route>
+						</Route>
+					</Routes>
+				</HashRouter>
+			</LunoKitProvider>
+		</QueryClientProvider>
 	</StrictMode>,
 );

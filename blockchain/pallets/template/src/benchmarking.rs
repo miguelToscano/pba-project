@@ -37,5 +37,14 @@ mod benchmarks {
 		assert!(!Claims::<T>::contains_key(&hash));
 	}
 
+	#[benchmark]
+	fn create_customer() {
+		let caller: T::AccountId = whitelisted_caller();
+		#[extrinsic_call]
+		create_customer(RawOrigin::Signed(caller.clone()));
+
+		assert!(Customers::<T>::contains_key(&caller));
+	}
+
 	impl_benchmark_test_suite!(ProofOfExistence, crate::mock::new_test_ext(), crate::mock::Test);
 }

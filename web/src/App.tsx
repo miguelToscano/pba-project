@@ -1,4 +1,5 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
+import { ConnectButton } from "@luno-kit/ui";
 import { useChainStore } from "./store/chainStore";
 import { useConnectionManagement } from "./hooks/useConnection";
 
@@ -75,18 +76,27 @@ export default function App() {
 						)}
 					</div>
 
-					{/* Connection indicator */}
-					<div className="ml-auto flex items-center gap-2 shrink-0">
-						<span
-							className={`w-2 h-2 rounded-full transition-colors duration-500 ${
-								connected
-									? "bg-accent-green shadow-[0_0_6px_rgba(52,211,153,0.5)]"
-									: "bg-text-muted"
-							}`}
+					{/* Chain + LunoKit wallet */}
+					<div className="ml-auto flex items-center gap-3 shrink-0">
+						<div
+							className="hidden sm:flex items-center gap-2 text-xs text-text-tertiary"
+							title="Substrate RPC session (Home page)"
+						>
+							<span
+								className={`w-2 h-2 rounded-full transition-colors duration-500 ${
+									connected
+										? "bg-accent-green shadow-[0_0_6px_rgba(52,211,153,0.5)]"
+										: "bg-text-muted"
+								}`}
+							/>
+							<span className="hidden md:inline">{connected ? "RPC" : "RPC off"}</span>
+						</div>
+						<ConnectButton
+							chainStatus="icon"
+							accountStatus="full"
+							showBalance={true}
+							displayPreference="address"
 						/>
-						<span className="text-xs text-text-tertiary hidden sm:inline">
-							{connected ? "Connected" : "Offline"}
-						</span>
 					</div>
 				</div>
 			</nav>

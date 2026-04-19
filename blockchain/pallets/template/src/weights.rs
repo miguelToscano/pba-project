@@ -29,6 +29,7 @@ use core::marker::PhantomData;
 pub trait WeightInfo {
 	fn create_claim() -> Weight;
 	fn revoke_claim() -> Weight;
+	fn create_customer() -> Weight;
 }
 
 /// Weights for pallet_template using the Substrate node and recommended hardware.
@@ -47,6 +48,13 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 			.saturating_add(T::DbWeight::get().reads(1_u64))
 			.saturating_add(T::DbWeight::get().writes(1_u64))
 	}
+
+	/// Storage: `TemplatePallet::Customers` (r:1 w:1)
+	fn create_customer() -> Weight {
+		Weight::from_parts(11_000_000, 1489)
+			.saturating_add(T::DbWeight::get().reads(1_u64))
+			.saturating_add(T::DbWeight::get().writes(1_u64))
+	}
 }
 
 /// For backwards compatibility and tests.
@@ -58,6 +66,12 @@ impl WeightInfo for () {
 	}
 
 	fn revoke_claim() -> Weight {
+		Weight::from_parts(11_000_000, 1489)
+			.saturating_add(RocksDbWeight::get().reads(1_u64))
+			.saturating_add(RocksDbWeight::get().writes(1_u64))
+	}
+
+	fn create_customer() -> Weight {
 		Weight::from_parts(11_000_000, 1489)
 			.saturating_add(RocksDbWeight::get().reads(1_u64))
 			.saturating_add(RocksDbWeight::get().writes(1_u64))

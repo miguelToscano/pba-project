@@ -1,16 +1,42 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useAccount, usePapiSigner } from "@luno-kit/react";
+import { stack_template } from "@polkadot-api/descriptors";
 import { useChainStore } from "../store/chainStore";
 import { useConnection } from "../hooks/useConnection";
 import { getClient } from "../hooks/useChain";
 import { LOCAL_WS_URL, getNetworkPresetEndpoints, type NetworkPreset } from "../config/network";
+import { formatDispatchError } from "../utils/format";
+
+function shortAddress(addr: string) {
+	return `${addr.slice(0, 8)}…${addr.slice(-6)}`;
+}
 
 export default function HomePage() {
 	const { wsUrl, connected, blockNumber, pallets } = useChainStore();
+	const { address: walletAddress } = useAccount();
+	const { data: walletSigner, isLoading: signerLoading } = usePapiSigner();
 	const { connect } = useConnection();
 	const [urlInput, setUrlInput] = useState(wsUrl);
 	const [error, setError] = useState<string | null>(null);
 	const [chainName, setChainName] = useState<string | null>(null);
 	const [connecting, setConnecting] = useState(false);
+	const [registerBusy, setRegisterBusy] = useState(false);
+	const [customerMsg, setCustomerMsg] = useState<string | null>(null);
+	const [isCustomer, setIsCustomer] = useState<boolean | null>(null);
+
+	const refreshCustomerStatus = useCallback(async () => {
+		if (!connected || pallets.templatePallet !== true || !walletAddress) {
+			setIsCustomer(null);
+			return;
+		}
+		try {
+			const api = getClient(wsUrl).getTypedApi(stack_template);
+			const row = await api.query.TemplatePallet.Customers.getValue(walletAddress);
+			setIsCustomer(row !== undefined);
+		} catch {
+			setIsCustomer(null);
+		}
+	}, [connected, pallets.templatePallet, wsUrl, walletAddress]);
 
 	useEffect(() => {
 		setUrlInput(wsUrl);
@@ -26,6 +52,10 @@ export default function HomePage() {
 			.then((data) => setChainName(data.name))
 			.catch(() => {});
 	}, [connected, wsUrl]);
+
+	useEffect(() => {
+		void refreshCustomerStatus();
+	}, [refreshCustomerStatus, blockNumber]);
 
 	async function handleConnect() {
 		setConnecting(true);
@@ -48,6 +78,39 @@ export default function HomePage() {
 		const endpoints = getNetworkPresetEndpoints(preset);
 		setUrlInput(endpoints.wsUrl);
 	}
+
+	async function registerAsCustomer() {
+		if (!connected || pallets.templatePallet !== true || !walletSigner || !walletAddress) {
+			return;
+		}
+		setRegisterBusy(true);
+		setCustomerMsg(null);
+		try {
+			const api = getClient(wsUrl).getTypedApi(stack_template);
+			const tx = api.tx.TemplatePallet.create_customer();
+			const result = await tx.signAndSubmit(walletSigner);
+			if (!result.ok) {
+				setCustomerMsg(`Error: ${formatDispatchError(result.dispatchError)}`);
+				return;
+			}
+			setCustomerMsg("You are registered as a customer.");
+			await refreshCustomerStatus();
+		} catch (e) {
+			console.error(e);
+			setCustomerMsg(`Error: ${e instanceof Error ? e.message : String(e)}`);
+		} finally {
+			setRegisterBusy(false);
+		}
+	}
+
+	const canRegister =
+		connected &&
+		pallets.templatePallet === true &&
+		!!walletAddress &&
+		!!walletSigner &&
+		!signerLoading &&
+		!registerBusy &&
+		isCustomer !== true;
 
 	return (
 		<div className="space-y-8 animate-fade-in">
@@ -125,8 +188,8 @@ export default function HomePage() {
 				</div>
 			</div>
 
-			{/* Feature card */}
-			<div className="max-w-xl">
+			{/* Feature + customer registration */}
+			<div className="max-w-xl space-y-4">
 				<FeatureCard
 					title="Pallet PoE"
 					description="Claim file hashes via the Substrate FRAME pallet using PAPI."
@@ -136,6 +199,71 @@ export default function HomePage() {
 					available={pallets.templatePallet}
 					unavailableReason="TemplatePallet not found in connected runtime"
 				/>
+
+				{pallets.templatePallet === true && (
+					<div className="card space-y-4">
+						<div>
+							<h3 className="text-lg font-semibold font-display text-text-primary mb-1">
+								Customer registration
+							</h3>
+							<p className="text-sm text-text-secondary">
+								Submit a{" "}
+								<code className="text-xs font-mono bg-white/[0.04] px-1 rounded">
+									create_customer
+								</code>{" "}
+								call using your connected browser extension account. Your wallet will open for
+								you to review and sign the extrinsic.
+							</p>
+						</div>
+						<div className="rounded-lg bg-white/[0.03] border border-white/[0.06] px-3 py-2">
+							<p className="text-xs font-medium text-text-tertiary uppercase tracking-wider mb-1">
+								Signing account
+							</p>
+							{walletAddress ? (
+								<code
+									className="text-sm text-text-primary font-mono break-all"
+									title={walletAddress}
+								>
+									{shortAddress(walletAddress)}
+								</code>
+							) : (
+								<span className="text-sm text-accent-yellow">Connect a wallet (nav bar) first.</span>
+							)}
+						</div>
+						{signerLoading && walletAddress && (
+							<p className="text-sm text-accent-yellow">Preparing extension signer…</p>
+						)}
+						<div className="flex flex-wrap items-center gap-3">
+							<button
+								type="button"
+								onClick={() => void registerAsCustomer()}
+								disabled={!canRegister}
+								className="btn-primary disabled:opacity-40 disabled:cursor-not-allowed"
+							>
+								{registerBusy
+									? "Awaiting signature / confirming…"
+									: "Register as Customer"}
+							</button>
+							{isCustomer === true && (
+								<span className="text-sm text-accent-green font-medium">
+									Already registered for this account
+								</span>
+							)}
+							{isCustomer === false && (
+								<span className="text-sm text-text-tertiary">Not registered yet</span>
+							)}
+						</div>
+						{customerMsg && (
+							<p
+								className={`text-sm font-medium ${
+									customerMsg.startsWith("Error") ? "text-accent-red" : "text-accent-green"
+								}`}
+							>
+								{customerMsg}
+							</p>
+						)}
+					</div>
+				)}
 			</div>
 		</div>
 	);

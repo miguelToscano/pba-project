@@ -43,6 +43,10 @@ pub mod pallet {
 		type WeightInfo: WeightInfo;
 	}
 
+	/// A customer record (extensible; currently a marker type).
+	#[derive(Encode, Decode, Clone, Copy, PartialEq, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
+	pub struct Customer;
+
 	/// A proof-of-existence claim: who created it and when.
 	#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 	#[scale_info(skip_type_params(T))]
@@ -57,6 +61,10 @@ pub mod pallet {
 	/// Maps a 32-byte hash to the claim details (owner, block number).
 	#[pallet::storage]
 	pub type Claims<T: Config> = StorageMap<_, Blake2_128Concat, H256, Claim<T>, OptionQuery>;
+
+	/// Registered customers: one entry per account.
+	#[pallet::storage]
+	pub type Customers<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, Customer, OptionQuery>;
 
 	/// Events emitted by this pallet.
 	#[pallet::event]
@@ -76,6 +84,11 @@ pub mod pallet {
 			/// The hash that was revoked.
 			hash: H256,
 		},
+		/// A new customer was registered.
+		CustomerCreated {
+			/// The account registered as a customer.
+			who: T::AccountId,
+		},
 	}
 
 	/// Errors that can occur in this pallet.
@@ -87,6 +100,8 @@ pub mod pallet {
 		NotClaimOwner,
 		/// No claim exists for this hash.
 		ClaimNotFound,
+		/// This account is already registered as a customer.
+		AlreadyCustomer,
 	}
 
 	/// Dispatchable calls.
@@ -118,6 +133,17 @@ pub mod pallet {
 			ensure!(claim.owner == who, Error::<T>::NotClaimOwner);
 			Claims::<T>::remove(hash);
 			Self::deposit_event(Event::ClaimRevoked { who, hash });
+			Ok(())
+		}
+
+		/// Register the caller as a customer.
+		#[pallet::call_index(2)]
+		#[pallet::weight(T::WeightInfo::create_customer())]
+		pub fn create_customer(origin: OriginFor<T>) -> DispatchResult {
+			let who = ensure_signed(origin)?;
+			ensure!(!Customers::<T>::contains_key(&who), Error::<T>::AlreadyCustomer);
+			Customers::<T>::insert(&who, Customer);
+			Self::deposit_event(Event::CustomerCreated { who });
 			Ok(())
 		}
 	}
