@@ -46,7 +46,7 @@ interface DisplayAccount {
 	name: string;
 	ss58: string;
 	eth: string;
-	type: "dev" | "extension" | "spektr";
+	type: "extension" | "spektr";
 }
 
 interface AccountInfo {
@@ -103,17 +103,8 @@ export default function AccountsPage() {
 	const [fundAmount, setFundAmount] = useState("10000");
 	const [accountInfos, setAccountInfos] = useState<Record<string, AccountInfo>>({});
 
-	// Build dev account display list
-	const devDisplayAccounts: DisplayAccount[] = devAccounts.map((acc) => ({
-		name: acc.name,
-		ss58: acc.address,
-		eth: ss58ToH160(acc.address),
-		type: "dev",
-	}));
-
-	// All SS58 addresses to query
+	// All SS58 addresses to query (extension + host; dev seed still used for Sudo funding only)
 	const allAddresses = [
-		...devAccounts.map((a) => a.address),
 		...extensionAccounts.map((a) => a.address),
 		...spektrAccounts.map((a) => a.address),
 	];
@@ -273,10 +264,6 @@ export default function AccountsPage() {
 	};
 
 	const typeBadge: Record<string, { className: string; label: string }> = {
-		dev: {
-			className: "bg-accent-blue/10 text-accent-blue border border-accent-blue/20",
-			label: "Dev",
-		},
 		extension: {
 			className: "bg-accent-purple/10 text-accent-purple border border-accent-purple/20",
 			label: "Extension",
@@ -292,8 +279,8 @@ export default function AccountsPage() {
 			<div className="space-y-2">
 				<h1 className="page-title text-polka-400">Accounts</h1>
 				<p className="text-text-secondary">
-					Manage dev accounts, connect browser extension wallets, or use Polkadot Host
-					accounts. Fund accounts using Sudo on the dev chain.
+					Connect browser extension wallets or use Polkadot Host accounts. Fund accounts using Sudo on
+					the dev chain.
 				</p>
 			</div>
 
@@ -319,26 +306,6 @@ export default function AccountsPage() {
 						{fundStatus}
 					</p>
 				)}
-			</div>
-
-			{/* Dev Accounts */}
-			<div className="card space-y-4">
-				<h2 className="section-title">Dev Accounts</h2>
-				<p className="text-sm text-text-muted">
-					Pre-funded accounts from the well-known dev seed phrase.
-				</p>
-				<div className="space-y-3">
-					{devDisplayAccounts.map((acc) => (
-						<AccountCard
-							key={acc.ss58}
-							account={acc}
-							info={accountInfos[acc.ss58]}
-							badge={typeBadge[acc.type]}
-							onFund={() => fundAccount(acc.ss58, acc.name)}
-							connected={connected}
-						/>
-					))}
-				</div>
 			</div>
 
 			{/* Polkadot Host Accounts */}

@@ -1,19 +1,16 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
 import { ConnectButton } from "@luno-kit/ui";
-import AccountRoleField from "./components/AccountRoleField";
 import { useChainStore } from "./store/chainStore";
 import { useConnectionManagement } from "./hooks/useConnection";
 
 export default function App() {
 	const location = useLocation();
-	const pallets = useChainStore((s) => s.pallets);
 	const connected = useChainStore((s) => s.connected);
 
 	useConnectionManagement();
 
 	const navItems = [
 		{ path: "/", label: "Home", enabled: true },
-		{ path: "/pallet", label: "Pallet PoE", enabled: pallets.templatePallet === true },
 		{ path: "/statements", label: "Statements", enabled: true },
 		{ path: "/accounts", label: "Accounts", enabled: true },
 	];
@@ -92,7 +89,6 @@ export default function App() {
 							/>
 							<span className="hidden md:inline">{connected ? "RPC" : "RPC off"}</span>
 						</div>
-						<AccountRoleField />
 						<ConnectButton
 							chainStatus="icon"
 							accountStatus="full"

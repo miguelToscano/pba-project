@@ -20,7 +20,6 @@ const queryClient = new QueryClient({
 });
 
 const HomePage = lazy(() => import("./pages/HomePage"));
-const PalletPage = lazy(() => import("./pages/PalletPage"));
 const AccountsPage = lazy(() => import("./pages/AccountsPage"));
 const StatementStorePage = lazy(() => import("./pages/StatementStorePage"));
 
@@ -44,14 +43,6 @@ createRoot(document.getElementById("root")!).render(
 									element={
 										<Suspense fallback={routeFallback}>
 											<HomePage />
-										</Suspense>
-									}
-								/>
-								<Route
-									path="pallet"
-									element={
-										<Suspense fallback={routeFallback}>
-											<PalletPage />
 										</Suspense>
 									}
 								/>

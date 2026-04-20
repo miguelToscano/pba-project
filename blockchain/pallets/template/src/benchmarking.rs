@@ -49,8 +49,10 @@ mod benchmarks {
 	#[benchmark]
 	fn create_restaurant() {
 		let caller: T::AccountId = whitelisted_caller();
+		let name = BoundedVec::<u8, ConstU32<128>>::try_from(b"Benchmark Bistro".to_vec()).unwrap();
+		let menu = BoundedVec::<MenuItem, ConstU32<64>>::default();
 		#[extrinsic_call]
-		create_restaurant(RawOrigin::Signed(caller.clone()));
+		create_restaurant(RawOrigin::Signed(caller.clone()), name, menu);
 
 		assert!(Restaurants::<T>::contains_key(&caller));
 	}

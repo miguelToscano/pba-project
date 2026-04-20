@@ -1,18 +1,28 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useAccount, usePapiSigner } from "@luno-kit/react";
+import { Binary } from "polkadot-api";
 import { stack_template } from "@polkadot-api/descriptors";
 import { useChainStore } from "../store/chainStore";
 import { useConnection } from "../hooks/useConnection";
+import { useAccountRoles } from "../hooks/useAccountRoles";
+import HomeRolePanel from "../components/HomeRolePanel";
+import RegisterRestaurantModal, {
+	MAX_MENU_ITEM_DESC_BYTES,
+	MAX_MENU_ITEM_NAME_BYTES,
+	MAX_RESTAURANT_NAME_BYTES,
+	type RestaurantRegistrationPayload,
+} from "../components/RegisterRestaurantModal";
 import { getClient } from "../hooks/useChain";
 import { LOCAL_WS_URL, getNetworkPresetEndpoints, type NetworkPreset } from "../config/network";
 import { formatDispatchError } from "../utils/format";
+import { requireUtf8MaxBytes } from "../utils/utf8Bounds";
 
 function shortAddress(addr: string) {
 	return `${addr.slice(0, 8)}…${addr.slice(-6)}`;
 }
 
 export default function HomePage() {
-	const { wsUrl, connected, blockNumber, pallets } = useChainStore();
+	const { wsUrl, connected, pallets } = useChainStore();
 	const { address: walletAddress } = useAccount();
 	const { data: walletSigner, isLoading: signerLoading } = usePapiSigner();
 	const { connect } = useConnection();
@@ -29,10 +39,6 @@ export default function HomePage() {
 	const [msgRestaurant, setMsgRestaurant] = useState<string | null>(null);
 	const [msgRider, setMsgRider] = useState<string | null>(null);
 
-	const [isCustomer, setIsCustomer] = useState<boolean | null>(null);
-	const [isRestaurant, setIsRestaurant] = useState<boolean | null>(null);
-	const [isRider, setIsRider] = useState<boolean | null>(null);
-
 	/** Temporary: inspect pallet storage maps (read-only). */
 	const [storageListBusy, setStorageListBusy] = useState<
 		null | "customers" | "restaurants" | "riders"
@@ -42,29 +48,10 @@ export default function HomePage() {
 
 	const anyRegisterBusy = busyCustomer || busyRestaurant || busyRider;
 
-	const refreshRegistrationStatus = useCallback(async () => {
-		if (!connected || pallets.templatePallet !== true || !walletAddress) {
-			setIsCustomer(null);
-			setIsRestaurant(null);
-			setIsRider(null);
-			return;
-		}
-		try {
-			const api = getClient(wsUrl).getTypedApi(stack_template);
-			const [c, r, d] = await Promise.all([
-				api.query.TemplatePallet.Customers.getValue(walletAddress),
-				api.query.TemplatePallet.Restaurants.getValue(walletAddress),
-				api.query.TemplatePallet.Riders.getValue(walletAddress),
-			]);
-			setIsCustomer(c !== undefined);
-			setIsRestaurant(r !== undefined);
-			setIsRider(d !== undefined);
-		} catch {
-			setIsCustomer(null);
-			setIsRestaurant(null);
-			setIsRider(null);
-		}
-	}, [connected, pallets.templatePallet, wsUrl, walletAddress]);
+	const { isCustomer, isRestaurant, isRider, refetch: refetchRoles } = useAccountRoles();
+
+	const [restaurantModalOpen, setRestaurantModalOpen] = useState(false);
+	const [showRoleRegistration, setShowRoleRegistration] = useState(false);
 
 	useEffect(() => {
 		setUrlInput(wsUrl);
@@ -80,10 +67,6 @@ export default function HomePage() {
 			.then((data) => setChainName(data.name))
 			.catch(() => {});
 	}, [connected, wsUrl]);
-
-	useEffect(() => {
-		void refreshRegistrationStatus();
-	}, [refreshRegistrationStatus, blockNumber]);
 
 	async function handleConnect() {
 		setConnecting(true);
@@ -128,7 +111,7 @@ export default function HomePage() {
 				return;
 			}
 			setMsgCustomer("You are registered as a customer.");
-			await refreshRegistrationStatus();
+			await refetchRoles();
 		} catch (e) {
 			console.error(e);
 			setMsgCustomer(`Error: ${e instanceof Error ? e.message : String(e)}`);
@@ -137,23 +120,47 @@ export default function HomePage() {
 		}
 	}
 
-	async function registerAsRestaurant() {
-		if (!registrationReady) return;
+	async function registerRestaurantFromForm(payload: RestaurantRegistrationPayload) {
+		if (!registrationReady || !walletSigner) {
+			throw new Error("Connect wallet and RPC, and wait for the signer to be ready.");
+		}
 		setBusyRestaurant(true);
 		setMsgRestaurant(null);
 		try {
 			const api = getClient(wsUrl).getTypedApi(stack_template);
-			const tx = api.tx.TemplatePallet.create_restaurant();
+			const nameBytes = requireUtf8MaxBytes(
+				payload.restaurantName,
+				MAX_RESTAURANT_NAME_BYTES,
+				"Restaurant name",
+			);
+			const menu = payload.menuItems.map((m) => ({
+				name: Binary.fromBytes(
+					requireUtf8MaxBytes(m.name, MAX_MENU_ITEM_NAME_BYTES, `Menu item “${m.name}” name`),
+				),
+				description: Binary.fromBytes(
+					requireUtf8MaxBytes(
+						m.description,
+						MAX_MENU_ITEM_DESC_BYTES,
+						`Menu item “${m.name}” description`,
+					),
+				),
+			}));
+			// Descriptor types refresh with `npx papi update` against a node running this runtime.
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			const tx = (api.tx.TemplatePallet as any).create_restaurant({
+				name: Binary.fromBytes(nameBytes),
+				menu,
+			});
 			const result = await tx.signAndSubmit(walletSigner);
 			if (!result.ok) {
-				setMsgRestaurant(`Error: ${formatDispatchError(result.dispatchError)}`);
-				return;
+				throw new Error(formatDispatchError(result.dispatchError));
 			}
+			setRestaurantModalOpen(false);
 			setMsgRestaurant("You are registered as a restaurant.");
-			await refreshRegistrationStatus();
+			await refetchRoles();
 		} catch (e) {
 			console.error(e);
-			setMsgRestaurant(`Error: ${e instanceof Error ? e.message : String(e)}`);
+			throw e instanceof Error ? e : new Error(String(e));
 		} finally {
 			setBusyRestaurant(false);
 		}
@@ -204,7 +211,7 @@ export default function HomePage() {
 				return;
 			}
 			setMsgRider("You are registered as a rider.");
-			await refreshRegistrationStatus();
+			await refetchRoles();
 		} catch (e) {
 			console.error(e);
 			setMsgRider(`Error: ${e instanceof Error ? e.message : String(e)}`);
@@ -235,35 +242,53 @@ export default function HomePage() {
 
 	return (
 		<div className="space-y-8 animate-fade-in">
+			<RegisterRestaurantModal
+				open={restaurantModalOpen}
+				onClose={() => !busyRestaurant && setRestaurantModalOpen(false)}
+				isSubmitting={busyRestaurant}
+				onConfirm={registerRestaurantFromForm}
+			/>
+
 			{/* Hero */}
-			<div className="space-y-3">
+			<div className="space-y-3 text-center">
 				<h1 className="page-title">
 					Polkadot{" "}
 					<span className="bg-gradient-to-r from-polka-400 to-polka-600 bg-clip-text text-transparent">
 						Eats
 					</span>
 				</h1>
-				<p className="text-text-secondary text-base leading-relaxed max-w-2xl">
-					A developer starter template demonstrating Proof of Existence using a Substrate
-					FRAME pallet. Drop a file to claim its hash on-chain.
+				<p className="text-text-secondary text-base leading-relaxed max-w-2xl mx-auto">
+					A decentralized way of ordering.
 				</p>
 			</div>
 
-
-			{/* Feature + role registration */}
-			<div className="space-y-4">
-				{pallets.templatePallet === true && (
-					<div className="card space-y-6">
-						<div>
-							<h3 className="text-lg font-semibold font-display text-text-primary mb-1">
-								Role registration
-							</h3>
-							<p className="text-sm text-text-secondary">
-								Register as a customer, restaurant, or rider using your connected browser
-								extension. Each action submits the matching extrinsic; your wallet will ask you
-								to sign.
-							</p>
+			{pallets.templatePallet === true && (
+				<>
+					<HomeRolePanel isCustomer={isCustomer} isRestaurant={isRestaurant} isRider={isRider} />
+					<div className="space-y-3">
+						<div className="flex justify-center">
+							<button
+								type="button"
+								onClick={() => setShowRoleRegistration((v) => !v)}
+								className="btn-secondary text-sm px-4 py-2"
+								aria-expanded={showRoleRegistration}
+							>
+								{showRoleRegistration ? "Hide role registration" : "Show role registration"}
+							</button>
 						</div>
+
+						{showRoleRegistration && (
+							<div className="card space-y-6">
+								<div>
+									<h3 className="text-lg font-semibold font-display text-text-primary mb-1">
+										Role registration
+									</h3>
+									<p className="text-sm text-text-secondary">
+										Register as a customer, restaurant, or rider using your connected browser
+										extension. Each action submits the matching extrinsic; your wallet will ask
+										you to sign.
+									</p>
+								</div>
 						<div className="rounded-lg bg-white/[0.03] border border-white/[0.06] px-3 py-2">
 							<p className="text-xs font-medium text-text-tertiary uppercase tracking-wider mb-1">
 								Signing account
@@ -301,7 +326,7 @@ export default function HomePage() {
 							<RoleRow
 								title="Restaurant"
 								callName="create_restaurant"
-								onRegister={() => void registerAsRestaurant()}
+								onRegister={() => setRestaurantModalOpen(true)}
 								disabled={!registrationReady}
 								busy={busyRestaurant}
 								buttonLabel="Register as Restaurant"
@@ -366,9 +391,11 @@ export default function HomePage() {
 								</div>
 							)}
 						</div>
+							</div>
+						)}
 					</div>
-				)}
-			</div>
+				</>
+			)}
 		</div>
 	);
 }

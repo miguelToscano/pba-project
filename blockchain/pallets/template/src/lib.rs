@@ -47,9 +47,45 @@ pub mod pallet {
 	#[derive(Encode, Decode, Clone, Copy, PartialEq, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 	pub struct Customer;
 
-	/// A restaurant record registered on-chain (extensible; currently a marker type).
-	#[derive(Encode, Decode, Clone, Copy, PartialEq, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
-	pub struct Restaurant;
+	/// One entry on a [`Restaurant`]'s menu.
+	#[derive(
+		Encode,
+		Decode,
+		DecodeWithMemTracking,
+		Clone,
+		PartialEq,
+		Eq,
+		RuntimeDebug,
+		TypeInfo,
+		MaxEncodedLen,
+		Default,
+	)]
+	pub struct MenuItem {
+		/// Short label for the dish (UTF-8 bytes, bounded for `MaxEncodedLen`).
+		pub name: BoundedVec<u8, ConstU32<64>>,
+		/// Longer description (UTF-8 bytes, bounded for `MaxEncodedLen`).
+		pub description: BoundedVec<u8, ConstU32<256>>,
+	}
+
+	/// A restaurant registered on-chain: display name and menu.
+	#[derive(
+		Encode,
+		Decode,
+		DecodeWithMemTracking,
+		Clone,
+		PartialEq,
+		Eq,
+		RuntimeDebug,
+		TypeInfo,
+		MaxEncodedLen,
+		Default,
+	)]
+	pub struct Restaurant {
+		/// Restaurant name (UTF-8 bytes, bounded for `MaxEncodedLen`).
+		pub name: BoundedVec<u8, ConstU32<128>>,
+		/// Ordered list of menu items (bounded length).
+		pub menu: BoundedVec<MenuItem, ConstU32<64>>,
+	}
 
 	/// A rider record registered on-chain (extensible; currently a marker type).
 	#[derive(Encode, Decode, Clone, Copy, PartialEq, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
@@ -72,11 +108,13 @@ pub mod pallet {
 
 	/// Registered customers: one entry per account.
 	#[pallet::storage]
-	pub type Customers<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, Customer, OptionQuery>;
+	pub type Customers<T: Config> =
+		StorageMap<_, Blake2_128Concat, T::AccountId, Customer, OptionQuery>;
 
 	/// Registered restaurants: one entry per operator account.
 	#[pallet::storage]
-	pub type Restaurants<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, Restaurant, OptionQuery>;
+	pub type Restaurants<T: Config> =
+		StorageMap<_, Blake2_128Concat, T::AccountId, Restaurant, OptionQuery>;
 
 	/// Registered riders (delivery): one entry per account.
 	#[pallet::storage]
@@ -132,6 +170,8 @@ pub mod pallet {
 		AlreadyRestaurant,
 		/// This account is already registered as a rider.
 		AlreadyRider,
+		/// Restaurant name must be non-empty.
+		RestaurantNameEmpty,
 	}
 
 	/// Dispatchable calls.
@@ -177,13 +217,18 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// Register the caller as a restaurant operator.
+		/// Register the caller as a restaurant operator with display name and menu.
 		#[pallet::call_index(3)]
 		#[pallet::weight(T::WeightInfo::create_restaurant())]
-		pub fn create_restaurant(origin: OriginFor<T>) -> DispatchResult {
+		pub fn create_restaurant(
+			origin: OriginFor<T>,
+			name: BoundedVec<u8, ConstU32<128>>,
+			menu: BoundedVec<MenuItem, ConstU32<64>>,
+		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			ensure!(!Restaurants::<T>::contains_key(&who), Error::<T>::AlreadyRestaurant);
-			Restaurants::<T>::insert(&who, Restaurant);
+			ensure!(!name.is_empty(), Error::<T>::RestaurantNameEmpty);
+			Restaurants::<T>::insert(&who, Restaurant { name, menu });
 			Self::deposit_event(Event::RestaurantCreated { who });
 			Ok(())
 		}
