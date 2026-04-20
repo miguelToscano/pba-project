@@ -17,3 +17,6 @@ export const lunokitConfig = createConfig({
 	autoConnect: true,
 	storage: createStorage({ storage: localStorage }),
 });
+
+/** LunoKit modals and ConnectButton: default palette before any user theme choice in localStorage. */
+export const lunokitTheme = { defaultMode: "dark" as const };

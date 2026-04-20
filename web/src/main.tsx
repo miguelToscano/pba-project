@@ -6,7 +6,7 @@ import { LunoKitProvider } from "@luno-kit/ui";
 import App from "./App";
 import { injectLunoUiStyles } from "./setupLunoUiStyles";
 import WalletGate from "./components/WalletGate";
-import { lunokitConfig } from "./config/lunokit";
+import { lunokitConfig, lunokitTheme } from "./config/lunokit";
 import "./index.css";
 
 injectLunoUiStyles();
@@ -34,7 +34,7 @@ const routeFallback = (
 createRoot(document.getElementById("root")!).render(
 	<StrictMode>
 		<QueryClientProvider client={queryClient}>
-			<LunoKitProvider config={lunokitConfig}>
+			<LunoKitProvider config={lunokitConfig} theme={lunokitTheme}>
 				<HashRouter>
 					<Routes>
 						<Route element={<WalletGate />}>

@@ -1,5 +1,6 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
 import { ConnectButton } from "@luno-kit/ui";
+import AccountRoleField from "./components/AccountRoleField";
 import { useChainStore } from "./store/chainStore";
 import { useConnectionManagement } from "./hooks/useConnection";
 
@@ -77,7 +78,7 @@ export default function App() {
 					</div>
 
 					{/* Chain + LunoKit wallet */}
-					<div className="ml-auto flex items-center gap-3 shrink-0">
+					<div className="ml-auto flex items-center gap-3 shrink-0 min-w-0">
 						<div
 							className="hidden sm:flex items-center gap-2 text-xs text-text-tertiary"
 							title="Substrate RPC session (Home page)"
@@ -91,11 +92,12 @@ export default function App() {
 							/>
 							<span className="hidden md:inline">{connected ? "RPC" : "RPC off"}</span>
 						</div>
+						<AccountRoleField />
 						<ConnectButton
 							chainStatus="icon"
 							accountStatus="full"
 							showBalance={true}
-							displayPreference="address"
+							displayPreference="name"
 						/>
 					</div>
 				</div>

@@ -213,14 +213,7 @@ export default function HomePage() {
 		}
 	}
 
-	function roleStatusLine(reg: boolean | null, label: string) {
-		if (reg === true) {
-			return (
-				<span className="text-sm text-accent-green font-medium">
-					Already registered as {label}
-				</span>
-			);
-		}
+	function roleStatusLine(reg: boolean | null) {
 		if (reg === false) {
 			return <span className="text-sm text-text-tertiary">Not registered yet</span>;
 		}
@@ -245,9 +238,9 @@ export default function HomePage() {
 			{/* Hero */}
 			<div className="space-y-3">
 				<h1 className="page-title">
-					Polkadot Stack{" "}
+					Polkadot{" "}
 					<span className="bg-gradient-to-r from-polka-400 to-polka-600 bg-clip-text text-transparent">
-						Template
+						Eats
 					</span>
 				</h1>
 				<p className="text-text-secondary text-base leading-relaxed max-w-2xl">
@@ -256,78 +249,9 @@ export default function HomePage() {
 				</p>
 			</div>
 
-			{/* Connection card */}
-			<div className="card space-y-5">
-				<div className="flex flex-wrap gap-2">
-					<button onClick={() => applyPreset("local")} className="btn-secondary text-xs">
-						Use Local Dev
-					</button>
-					<button
-						onClick={() => applyPreset("testnet")}
-						className="btn-secondary text-xs"
-					>
-						Use Hub TestNet
-					</button>
-				</div>
-
-				<div>
-					<label className="label">Substrate WebSocket Endpoint</label>
-					<div className="flex gap-2">
-						<input
-							type="text"
-							value={urlInput}
-							onChange={(e) => setUrlInput(e.target.value)}
-							onKeyDown={(e) => e.key === "Enter" && handleConnect()}
-							placeholder={LOCAL_WS_URL}
-							className="input-field flex-1"
-						/>
-						<button
-							onClick={handleConnect}
-							disabled={connecting}
-							className="btn-primary"
-						>
-							{connecting ? "Connecting..." : "Connect"}
-						</button>
-					</div>
-				</div>
-
-				{/* Status grid */}
-				<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-					<StatusItem label="Chain Status">
-						{error ? (
-							<span className="text-accent-red text-sm">{error}</span>
-						) : connected ? (
-							<span className="text-accent-green flex items-center gap-1.5">
-								<span className="w-1.5 h-1.5 rounded-full bg-accent-green animate-pulse-slow" />
-								Connected
-							</span>
-						) : connecting ? (
-							<span className="text-accent-yellow">Connecting...</span>
-						) : (
-							<span className="text-text-muted">Disconnected</span>
-						)}
-					</StatusItem>
-					<StatusItem label="Chain Name">
-						{chainName || <span className="text-text-muted">...</span>}
-					</StatusItem>
-					<StatusItem label="Latest Block">
-						<span className="font-mono">#{blockNumber}</span>
-					</StatusItem>
-				</div>
-			</div>
 
 			{/* Feature + role registration */}
-			<div className="max-w-xl space-y-4">
-				<FeatureCard
-					title="Pallet PoE"
-					description="Claim file hashes via the Substrate FRAME pallet using PAPI."
-					link="/pallet"
-					accentColor="text-accent-blue"
-					borderColor="hover:border-accent-blue/20"
-					available={pallets.templatePallet}
-					unavailableReason="TemplatePallet not found in connected runtime"
-				/>
-
+			<div className="space-y-4">
 				{pallets.templatePallet === true && (
 					<div className="card space-y-6">
 						<div>
@@ -359,39 +283,47 @@ export default function HomePage() {
 							<p className="text-sm text-accent-yellow">Preparing extension signer…</p>
 						)}
 
-						<RoleRow
-							title="Customer"
-							callName="create_customer"
-							onRegister={() => void registerAsCustomer()}
-							disabled={!registrationReady || isCustomer === true}
-							busy={busyCustomer}
-							buttonLabel="Register as Customer"
-							status={roleStatusLine(isCustomer, "a customer")}
-							message={roleMessage(msgCustomer)}
-							withTopDivider={false}
-						/>
+						{isCustomer !== true && (
+							<RoleRow
+								title="Customer"
+								callName="create_customer"
+								onRegister={() => void registerAsCustomer()}
+								disabled={!registrationReady}
+								busy={busyCustomer}
+								buttonLabel="Register as Customer"
+								status={roleStatusLine(isCustomer)}
+								message={roleMessage(msgCustomer)}
+								withTopDivider={false}
+							/>
+						)}
 
-						<RoleRow
-							title="Restaurant"
-							callName="create_restaurant"
-							onRegister={() => void registerAsRestaurant()}
-							disabled={!registrationReady || isRestaurant === true}
-							busy={busyRestaurant}
-							buttonLabel="Register as Restaurant"
-							status={roleStatusLine(isRestaurant, "a restaurant")}
-							message={roleMessage(msgRestaurant)}
-						/>
+						{isRestaurant !== true && (
+							<RoleRow
+								title="Restaurant"
+								callName="create_restaurant"
+								onRegister={() => void registerAsRestaurant()}
+								disabled={!registrationReady}
+								busy={busyRestaurant}
+								buttonLabel="Register as Restaurant"
+								status={roleStatusLine(isRestaurant)}
+								message={roleMessage(msgRestaurant)}
+								withTopDivider={isCustomer !== true}
+							/>
+						)}
 
-						<RoleRow
-							title="Rider"
-							callName="create_rider"
-							onRegister={() => void registerAsRider()}
-							disabled={!registrationReady || isRider === true}
-							busy={busyRider}
-							buttonLabel="Register as Rider"
-							status={roleStatusLine(isRider, "a rider")}
-							message={roleMessage(msgRider)}
-						/>
+						{isRider !== true && (
+							<RoleRow
+								title="Rider"
+								callName="create_rider"
+								onRegister={() => void registerAsRider()}
+								disabled={!registrationReady}
+								busy={busyRider}
+								buttonLabel="Register as Rider"
+								status={roleStatusLine(isRider)}
+								message={roleMessage(msgRider)}
+								withTopDivider={isCustomer !== true || isRestaurant !== true}
+							/>
+						)}
 
 						<div className="border-t border-dashed border-white/[0.12] pt-4 space-y-3">
 							<p className="text-xs text-text-tertiary">
