@@ -32,10 +32,7 @@ export function rememberDeliveryPin(
 	pin: string,
 ): void {
 	try {
-		localStorage.setItem(
-			deliveryPinStorageKey(wsUrl, accountAddress, orderId),
-			pin,
-		);
+		localStorage.setItem(deliveryPinStorageKey(wsUrl, accountAddress, orderId), pin);
 	} catch {
 		// ignore quota / private mode
 	}
@@ -47,9 +44,7 @@ export function loadDeliveryPin(
 	orderId: bigint,
 ): string | null {
 	try {
-		return localStorage.getItem(
-			deliveryPinStorageKey(wsUrl, accountAddress, orderId),
-		);
+		return localStorage.getItem(deliveryPinStorageKey(wsUrl, accountAddress, orderId));
 	} catch {
 		return null;
 	}

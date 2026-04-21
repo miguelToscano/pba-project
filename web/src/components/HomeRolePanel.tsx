@@ -26,10 +26,7 @@ import {
 } from "../utils/deliveryPin";
 import { signAndSubmitAwaitBestBlock } from "../utils/signAndSubmitBestBlock";
 import { applyTemplatePalletTxToQueryCache } from "../utils/templatePalletQueryCache";
-import {
-	parseOrderPlacedFromTxEvents,
-	toOrderId,
-} from "../utils/templatePalletTxEvents";
+import { parseOrderPlacedFromTxEvents, toOrderId } from "../utils/templatePalletTxEvents";
 
 type RoleTab = "customer" | "restaurant" | "rider";
 
@@ -160,7 +157,8 @@ function RiderReadyPickupOrders({ isRider }: { isRider: boolean | null }) {
 		<div className="space-y-3">
 			<GradientSectionTitle>Ready for pickup</GradientSectionTitle>
 			<p className="text-xs text-text-tertiary mb-2 text-center">
-				On-chain orders in <span className="font-medium text-text-secondary">Ready for pickup</span>{" "}
+				On-chain orders in{" "}
+				<span className="font-medium text-text-secondary">Ready for pickup</span>{" "}
 				(restaurant has marked the order ready; rider assignment is shown when set).
 			</p>
 			{isRider !== true && (
@@ -168,9 +166,7 @@ function RiderReadyPickupOrders({ isRider }: { isRider: boolean | null }) {
 					Register as a rider (role registration above) to claim orders here.
 				</p>
 			)}
-			{claimMsg && (
-				<p className="text-sm text-accent-red text-center">{claimMsg}</p>
-			)}
+			{claimMsg && <p className="text-sm text-accent-red text-center">{claimMsg}</p>}
 			{query.isPending && (
 				<div className="mx-auto w-full rounded-lg border border-white/[0.06] p-6 animate-pulse h-24" />
 			)}
@@ -206,7 +202,9 @@ function RiderReadyPickupOrders({ isRider }: { isRider: boolean | null }) {
 									<td className="py-3 px-3 font-mono text-xs text-text-secondary">
 										#{row.id.toString()}
 									</td>
-									<td className="py-3 px-3 font-mono text-xs">{shortAddress(row.customer)}</td>
+									<td className="py-3 px-3 font-mono text-xs">
+										{shortAddress(row.customer)}
+									</td>
 									<td className="py-3 px-3 font-mono text-xs">
 										{shortAddress(row.restaurant)}
 									</td>
@@ -950,9 +948,9 @@ function RestaurantMenuModal({
 				<div className="mt-4 flex flex-col gap-2 border-t border-white/[0.08] pt-4">
 					{isCustomer === true && (
 						<p className="text-xs text-text-tertiary text-center">
-							A random 4-digit delivery PIN is created when you place the order; only the
-							hash is stored on-chain. Your PIN appears under My orders (saved in this
-							browser).
+							A random 4-digit delivery PIN is created when you place the order; only
+							the hash is stored on-chain. Your PIN appears under My orders (saved in
+							this browser).
 						</p>
 					)}
 					{isCustomer !== true && (
