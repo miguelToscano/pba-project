@@ -75,7 +75,11 @@ export default function RegisterRestaurantModal({ open, onClose, isSubmitting, o
 			if (!nm) continue;
 			try {
 				requireUtf8MaxBytes(nm, MAX_MENU_ITEM_NAME_BYTES, `Menu item ${i + 1} name`);
-				requireUtf8MaxBytes(desc, MAX_MENU_ITEM_DESC_BYTES, `Menu item ${i + 1} description`);
+				requireUtf8MaxBytes(
+					desc,
+					MAX_MENU_ITEM_DESC_BYTES,
+					`Menu item ${i + 1} description`,
+				);
 			} catch (err) {
 				setFormError(err instanceof Error ? err.message : String(err));
 				return;
@@ -92,7 +96,9 @@ export default function RegisterRestaurantModal({ open, onClose, isSubmitting, o
 				return;
 			}
 			if (price < 0n || price > U128_MAX) {
-				setFormError(`Menu item ${i + 1}: price must fit in u128 (0 … ${U128_MAX.toString()}).`);
+				setFormError(
+					`Menu item ${i + 1}: price must fit in u128 (0 … ${U128_MAX.toString()}).`,
+				);
 				return;
 			}
 			menuItems.push({ name: nm, description: desc, price });
@@ -144,11 +150,15 @@ export default function RegisterRestaurantModal({ open, onClose, isSubmitting, o
 			>
 				<div className="flex items-start justify-between gap-3 mb-4">
 					<div>
-						<h2 id="register-restaurant-title" className="text-lg font-semibold font-display text-text-primary">
+						<h2
+							id="register-restaurant-title"
+							className="text-lg font-semibold font-display text-text-primary"
+						>
 							Register restaurant
 						</h2>
 						<p className="text-sm text-text-secondary mt-1">
-							Set an on-chain name and menu (UTF-8; byte limits match the template pallet).
+							Set an on-chain name and menu (UTF-8; byte limits match the template
+							pallet).
 						</p>
 					</div>
 					<button
@@ -165,7 +175,10 @@ export default function RegisterRestaurantModal({ open, onClose, isSubmitting, o
 				<form onSubmit={(e) => void handleSubmit(e)} className="space-y-5">
 					<div>
 						<label htmlFor="restaurant-name" className="label">
-							Restaurant name <span className="text-text-muted font-normal">({nameBytes}/{MAX_RESTAURANT_NAME_BYTES} bytes)</span>
+							Restaurant name{" "}
+							<span className="text-text-muted font-normal">
+								({nameBytes}/{MAX_RESTAURANT_NAME_BYTES} bytes)
+							</span>
 						</label>
 						<input
 							id="restaurant-name"
@@ -181,7 +194,9 @@ export default function RegisterRestaurantModal({ open, onClose, isSubmitting, o
 
 					<div className="space-y-3">
 						<div className="flex items-center justify-between gap-2">
-							<span className="text-sm font-medium text-text-primary">Menu items</span>
+							<span className="text-sm font-medium text-text-primary">
+								Menu items
+							</span>
 							<button
 								type="button"
 								onClick={addRow}
@@ -192,10 +207,10 @@ export default function RegisterRestaurantModal({ open, onClose, isSubmitting, o
 							</button>
 						</div>
 						<p className="text-xs text-text-tertiary">
-							Include at least one item with a name. Empty rows are ignored. Max {MAX_MENU_ITEMS}{" "}
-							items; each name ≤ {MAX_MENU_ITEM_NAME_BYTES} bytes, description ≤{" "}
-							{MAX_MENU_ITEM_DESC_BYTES} bytes (UTF-8). Price is a non-negative integer (on-chain u128,
-							e.g. smallest token unit).
+							Include at least one item with a name. Empty rows are ignored. Max{" "}
+							{MAX_MENU_ITEMS} items; each name ≤ {MAX_MENU_ITEM_NAME_BYTES} bytes,
+							description ≤ {MAX_MENU_ITEM_DESC_BYTES} bytes (UTF-8). Price is a
+							non-negative integer (on-chain u128, e.g. smallest token unit).
 						</p>
 						<div className="space-y-3">
 							{rows.map((row, index) => (
@@ -204,7 +219,9 @@ export default function RegisterRestaurantModal({ open, onClose, isSubmitting, o
 									className="rounded-lg border border-white/[0.08] bg-white/[0.02] p-3 space-y-2"
 								>
 									<div className="flex items-center justify-between">
-										<span className="text-xs font-medium text-text-tertiary">Item {index + 1}</span>
+										<span className="text-xs font-medium text-text-tertiary">
+											Item {index + 1}
+										</span>
 										{rows.length > 1 && (
 											<button
 												type="button"
@@ -226,19 +243,25 @@ export default function RegisterRestaurantModal({ open, onClose, isSubmitting, o
 									/>
 									<textarea
 										value={row.description}
-										onChange={(e) => updateRow(index, { description: e.target.value })}
+										onChange={(e) =>
+											updateRow(index, { description: e.target.value })
+										}
 										rows={2}
 										className="input-field w-full font-sans text-sm resize-y min-h-[52px]"
 										placeholder="Description (optional)"
 										disabled={isSubmitting}
 									/>
 									<label className="block">
-										<span className="text-xs text-text-tertiary">Price (u128, whole units)</span>
+										<span className="text-xs text-text-tertiary">
+											Price (u128, whole units)
+										</span>
 										<input
 											type="text"
 											inputMode="numeric"
 											value={row.price}
-											onChange={(e) => updateRow(index, { price: e.target.value })}
+											onChange={(e) =>
+												updateRow(index, { price: e.target.value })
+											}
 											className="input-field w-full font-mono text-sm mt-1"
 											placeholder="0"
 											autoComplete="off"
@@ -250,7 +273,9 @@ export default function RegisterRestaurantModal({ open, onClose, isSubmitting, o
 						</div>
 					</div>
 
-					{formError && <p className="text-sm text-accent-red font-medium">{formError}</p>}
+					{formError && (
+						<p className="text-sm text-accent-red font-medium">{formError}</p>
+					)}
 
 					<div className="flex flex-wrap justify-end gap-2 pt-1">
 						<button
@@ -261,7 +286,11 @@ export default function RegisterRestaurantModal({ open, onClose, isSubmitting, o
 						>
 							Cancel
 						</button>
-						<button type="submit" disabled={isSubmitting} className="btn-primary disabled:opacity-40">
+						<button
+							type="submit"
+							disabled={isSubmitting}
+							className="btn-primary disabled:opacity-40"
+						>
 							{isSubmitting ? "Signing…" : "Register on-chain"}
 						</button>
 					</div>

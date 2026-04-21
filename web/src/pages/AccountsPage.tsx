@@ -280,8 +280,8 @@ export default function AccountsPage() {
 			<div className="space-y-2">
 				<h1 className="page-title text-polka-400">Accounts</h1>
 				<p className="text-text-secondary">
-					Connect browser extension wallets or use Polkadot Host accounts. Fund accounts using Sudo on
-					the dev chain.
+					Connect browser extension wallets or use Polkadot Host accounts. Fund accounts
+					using Sudo on the dev chain.
 				</p>
 			</div>
 

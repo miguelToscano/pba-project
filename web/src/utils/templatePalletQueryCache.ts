@@ -29,17 +29,29 @@ export function applyTemplatePalletTxToQueryCache(
 	const statusChanged = parseOrderStatusChangedFromTxEvents(events);
 	if (statusChanged) {
 		queryClient.setQueriesData({ queryKey: ["restaurantOrders"], exact: false }, (prev) =>
-			patchOrderStatusInRestaurantOrders(prev as RestaurantOrderRow[] | undefined, statusChanged.orderId, statusChanged.status),
+			patchOrderStatusInRestaurantOrders(
+				prev as RestaurantOrderRow[] | undefined,
+				statusChanged.orderId,
+				statusChanged.status,
+			),
 		);
 		queryClient.setQueriesData({ queryKey: ["customerMyOrders"], exact: false }, (prev) =>
-			patchOrderStatusInRestaurantOrders(prev as RestaurantOrderRow[] | undefined, statusChanged.orderId, statusChanged.status),
+			patchOrderStatusInRestaurantOrders(
+				prev as RestaurantOrderRow[] | undefined,
+				statusChanged.orderId,
+				statusChanged.status,
+			),
 		);
 	}
 
 	const placed = parseOrderPlacedFromTxEvents(events);
 	if (placed) {
-		void queryClient.invalidateQueries({ queryKey: ["customerMyOrders", placed.customer, wsUrl] });
-		void queryClient.invalidateQueries({ queryKey: ["restaurantOrders", placed.restaurant, wsUrl] });
+		void queryClient.invalidateQueries({
+			queryKey: ["customerMyOrders", placed.customer, wsUrl],
+		});
+		void queryClient.invalidateQueries({
+			queryKey: ["restaurantOrders", placed.restaurant, wsUrl],
+		});
 	}
 
 	if (!walletAddress) return;
@@ -57,19 +69,33 @@ export function applyTemplatePalletTxToQueryCache(
 	};
 
 	const customerCreated = findLastEventPayloadByType(events, "CustomerCreated");
-	if (customerCreated && typeof customerCreated.who === "string" && customerCreated.who === walletAddress) {
+	if (
+		customerCreated &&
+		typeof customerCreated.who === "string" &&
+		customerCreated.who === walletAddress
+	) {
 		patchRole("isCustomer");
 	}
 
 	const restaurantCreated = findLastEventPayloadByType(events, "RestaurantCreated");
-	if (restaurantCreated && typeof restaurantCreated.who === "string" && restaurantCreated.who === walletAddress) {
+	if (
+		restaurantCreated &&
+		typeof restaurantCreated.who === "string" &&
+		restaurantCreated.who === walletAddress
+	) {
 		patchRole("isRestaurant");
 		void queryClient.invalidateQueries({ queryKey: ["customerRestaurantsList", wsUrl] });
-		void queryClient.invalidateQueries({ queryKey: ["homeRestaurantProfile", walletAddress, wsUrl] });
+		void queryClient.invalidateQueries({
+			queryKey: ["homeRestaurantProfile", walletAddress, wsUrl],
+		});
 	}
 
 	const riderCreated = findLastEventPayloadByType(events, "RiderCreated");
-	if (riderCreated && typeof riderCreated.who === "string" && riderCreated.who === walletAddress) {
+	if (
+		riderCreated &&
+		typeof riderCreated.who === "string" &&
+		riderCreated.who === walletAddress
+	) {
 		patchRole("isRider");
 	}
 }

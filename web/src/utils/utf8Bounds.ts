@@ -9,7 +9,9 @@ export function utf8ByteLength(s: string): number {
 export function requireUtf8MaxBytes(s: string, maxBytes: number, label: string): Uint8Array {
 	const bytes = encoder.encode(s);
 	if (bytes.length > maxBytes) {
-		throw new Error(`${label} is too long (${bytes.length} bytes; max ${maxBytes} UTF-8 bytes).`);
+		throw new Error(
+			`${label} is too long (${bytes.length} bytes; max ${maxBytes} UTF-8 bytes).`,
+		);
 	}
 	return bytes;
 }

@@ -18,9 +18,7 @@ type TxWithWatch = {
 	signSubmitAndWatch: (signer: PolkadotSigner) => import("rxjs").Observable<unknown>;
 };
 
-function isBestBlockFound(
-	ev: unknown,
-): ev is {
+function isBestBlockFound(ev: unknown): ev is {
 	type: "txBestBlocksState";
 	found: true;
 	txHash: string;

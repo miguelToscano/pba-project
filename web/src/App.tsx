@@ -87,7 +87,9 @@ export default function App() {
 										: "bg-text-muted"
 								}`}
 							/>
-							<span className="hidden md:inline">{connected ? "RPC" : "RPC off"}</span>
+							<span className="hidden md:inline">
+								{connected ? "RPC" : "RPC off"}
+							</span>
 						</div>
 						<ConnectButton
 							chainStatus="icon"

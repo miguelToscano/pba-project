@@ -35,17 +35,17 @@ export function nextAdvanceActionLabel(status: unknown): string | null {
 }
 
 /** Human-readable line summary using menu labels when available. */
-export function formatOrderLinesSummary(
-	lines: unknown,
-	menu: ParsedMenuRow[],
-): string {
+export function formatOrderLinesSummary(lines: unknown, menu: ParsedMenuRow[]): string {
 	if (!Array.isArray(lines) || lines.length === 0) return "—";
 	const parts: string[] = [];
 	for (const line of lines) {
 		const rec = line as { menu_index?: unknown; quantity?: unknown };
 		const idx = typeof rec.menu_index === "number" ? rec.menu_index : Number(rec.menu_index);
 		const qty = typeof rec.quantity === "number" ? rec.quantity : Number(rec.quantity);
-		const label = Number.isInteger(idx) && idx >= 0 && idx < menu.length ? menu[idx]!.name || `Item ${idx}` : `#${idx}`;
+		const label =
+			Number.isInteger(idx) && idx >= 0 && idx < menu.length
+				? menu[idx]!.name || `Item ${idx}`
+				: `#${idx}`;
 		parts.push(`${qty}× ${label}`);
 	}
 	return parts.join(", ");

@@ -97,7 +97,11 @@ export default function HomePage() {
 			);
 			const menu = payload.menuItems.map((m) => ({
 				name: Binary.fromBytes(
-					requireUtf8MaxBytes(m.name, MAX_MENU_ITEM_NAME_BYTES, `Menu item “${m.name}” name`),
+					requireUtf8MaxBytes(
+						m.name,
+						MAX_MENU_ITEM_NAME_BYTES,
+						`Menu item “${m.name}” name`,
+					),
 				),
 				description: Binary.fromBytes(
 					requireUtf8MaxBytes(
@@ -246,7 +250,9 @@ export default function HomePage() {
 								className="btn-secondary text-sm px-4 py-2"
 								aria-expanded={showRoleRegistration}
 							>
-								{showRoleRegistration ? "Hide role registration" : "Show role registration"}
+								{showRoleRegistration
+									? "Hide role registration"
+									: "Show role registration"}
 							</button>
 						</div>
 
@@ -257,113 +263,130 @@ export default function HomePage() {
 										Role registration
 									</h3>
 									<p className="text-sm text-text-secondary">
-										Register as a customer, restaurant, or rider using your connected browser
-										extension. Each action submits the matching extrinsic; your wallet will ask
-										you to sign.
+										Register as a customer, restaurant, or rider using your
+										connected browser extension. Each action submits the
+										matching extrinsic; your wallet will ask you to sign.
 									</p>
 								</div>
-						<div className="rounded-lg bg-white/[0.03] border border-white/[0.06] px-3 py-2">
-							<p className="text-xs font-medium text-text-tertiary uppercase tracking-wider mb-1">
-								Signing account
-							</p>
-							{walletAddress ? (
-								<code
-									className="text-sm text-text-primary font-mono break-all"
-									title={walletAddress}
-								>
-									{shortAddress(walletAddress)}
-								</code>
-							) : (
-								<span className="text-sm text-accent-yellow">Connect a wallet (nav bar) first.</span>
-							)}
-						</div>
-						{signerLoading && walletAddress && (
-							<p className="text-sm text-accent-yellow">Preparing extension signer…</p>
-						)}
-
-						{isCustomer !== true && (
-							<RoleRow
-								title="Customer"
-								callName="create_customer"
-								onRegister={() => void registerAsCustomer()}
-								disabled={!registrationReady}
-								busy={busyCustomer}
-								buttonLabel="Register as Customer"
-								status={roleStatusLine(isCustomer)}
-								message={roleMessage(msgCustomer)}
-								withTopDivider={false}
-							/>
-						)}
-
-						{isRestaurant !== true && (
-							<RoleRow
-								title="Restaurant"
-								callName="create_restaurant"
-								onRegister={() => setRestaurantModalOpen(true)}
-								disabled={!registrationReady}
-								busy={busyRestaurant}
-								buttonLabel="Register as Restaurant"
-								status={roleStatusLine(isRestaurant)}
-								message={roleMessage(msgRestaurant)}
-								withTopDivider={isCustomer !== true}
-							/>
-						)}
-
-						{isRider !== true && (
-							<RoleRow
-								title="Rider"
-								callName="create_rider"
-								onRegister={() => void registerAsRider()}
-								disabled={!registrationReady}
-								busy={busyRider}
-								buttonLabel="Register as Rider"
-								status={roleStatusLine(isRider)}
-								message={roleMessage(msgRider)}
-								withTopDivider={isCustomer !== true || isRestaurant !== true}
-							/>
-						)}
-
-						<div className="border-t border-dashed border-white/[0.12] pt-4 space-y-3">
-							<p className="text-xs text-text-tertiary">
-								Temporary — list accounts in pallet storage (read-only RPC, no signature).
-							</p>
-							<div className="flex flex-wrap gap-2">
-								<button
-									type="button"
-									onClick={() => void loadRegisteredAccounts("customers")}
-									disabled={!connected || storageListBusy !== null}
-									className="btn-secondary text-xs disabled:opacity-40"
-								>
-									{storageListBusy === "customers" ? "Loading…" : "List customers"}
-								</button>
-								<button
-									type="button"
-									onClick={() => void loadRegisteredAccounts("restaurants")}
-									disabled={!connected || storageListBusy !== null}
-									className="btn-secondary text-xs disabled:opacity-40"
-								>
-									{storageListBusy === "restaurants" ? "Loading…" : "List restaurants"}
-								</button>
-								<button
-									type="button"
-									onClick={() => void loadRegisteredAccounts("riders")}
-									disabled={!connected || storageListBusy !== null}
-									className="btn-secondary text-xs disabled:opacity-40"
-								>
-									{storageListBusy === "riders" ? "Loading…" : "List riders"}
-								</button>
-							</div>
-							{storageListError && (
-								<p className="text-sm text-accent-red">{storageListError}</p>
-							)}
-							{storageListText && (
-								<div className="rounded-lg bg-black/25 border border-white/[0.06] px-3 py-2 max-h-48 overflow-y-auto">
-									<pre className="text-xs font-mono text-text-secondary whitespace-pre-wrap break-all">
-										{storageListText}
-									</pre>
+								<div className="rounded-lg bg-white/[0.03] border border-white/[0.06] px-3 py-2">
+									<p className="text-xs font-medium text-text-tertiary uppercase tracking-wider mb-1">
+										Signing account
+									</p>
+									{walletAddress ? (
+										<code
+											className="text-sm text-text-primary font-mono break-all"
+											title={walletAddress}
+										>
+											{shortAddress(walletAddress)}
+										</code>
+									) : (
+										<span className="text-sm text-accent-yellow">
+											Connect a wallet (nav bar) first.
+										</span>
+									)}
 								</div>
-							)}
-						</div>
+								{signerLoading && walletAddress && (
+									<p className="text-sm text-accent-yellow">
+										Preparing extension signer…
+									</p>
+								)}
+
+								{isCustomer !== true && (
+									<RoleRow
+										title="Customer"
+										callName="create_customer"
+										onRegister={() => void registerAsCustomer()}
+										disabled={!registrationReady}
+										busy={busyCustomer}
+										buttonLabel="Register as Customer"
+										status={roleStatusLine(isCustomer)}
+										message={roleMessage(msgCustomer)}
+										withTopDivider={false}
+									/>
+								)}
+
+								{isRestaurant !== true && (
+									<RoleRow
+										title="Restaurant"
+										callName="create_restaurant"
+										onRegister={() => setRestaurantModalOpen(true)}
+										disabled={!registrationReady}
+										busy={busyRestaurant}
+										buttonLabel="Register as Restaurant"
+										status={roleStatusLine(isRestaurant)}
+										message={roleMessage(msgRestaurant)}
+										withTopDivider={isCustomer !== true}
+									/>
+								)}
+
+								{isRider !== true && (
+									<RoleRow
+										title="Rider"
+										callName="create_rider"
+										onRegister={() => void registerAsRider()}
+										disabled={!registrationReady}
+										busy={busyRider}
+										buttonLabel="Register as Rider"
+										status={roleStatusLine(isRider)}
+										message={roleMessage(msgRider)}
+										withTopDivider={
+											isCustomer !== true || isRestaurant !== true
+										}
+									/>
+								)}
+
+								<div className="border-t border-dashed border-white/[0.12] pt-4 space-y-3">
+									<p className="text-xs text-text-tertiary">
+										Temporary — list accounts in pallet storage (read-only RPC,
+										no signature).
+									</p>
+									<div className="flex flex-wrap gap-2">
+										<button
+											type="button"
+											onClick={() => void loadRegisteredAccounts("customers")}
+											disabled={!connected || storageListBusy !== null}
+											className="btn-secondary text-xs disabled:opacity-40"
+										>
+											{storageListBusy === "customers"
+												? "Loading…"
+												: "List customers"}
+										</button>
+										<button
+											type="button"
+											onClick={() =>
+												void loadRegisteredAccounts("restaurants")
+											}
+											disabled={!connected || storageListBusy !== null}
+											className="btn-secondary text-xs disabled:opacity-40"
+										>
+											{storageListBusy === "restaurants"
+												? "Loading…"
+												: "List restaurants"}
+										</button>
+										<button
+											type="button"
+											onClick={() => void loadRegisteredAccounts("riders")}
+											disabled={!connected || storageListBusy !== null}
+											className="btn-secondary text-xs disabled:opacity-40"
+										>
+											{storageListBusy === "riders"
+												? "Loading…"
+												: "List riders"}
+										</button>
+									</div>
+									{storageListError && (
+										<p className="text-sm text-accent-red">
+											{storageListError}
+										</p>
+									)}
+									{storageListText && (
+										<div className="rounded-lg bg-black/25 border border-white/[0.06] px-3 py-2 max-h-48 overflow-y-auto">
+											<pre className="text-xs font-mono text-text-secondary whitespace-pre-wrap break-all">
+												{storageListText}
+											</pre>
+										</div>
+									)}
+								</div>
 							</div>
 						)}
 					</div>
@@ -395,9 +418,7 @@ function RoleRow({
 	withTopDivider?: boolean;
 }) {
 	return (
-		<div
-			className={`space-y-2 py-3 ${withTopDivider ? "border-t border-white/[0.06]" : ""}`}
-		>
+		<div className={`space-y-2 py-3 ${withTopDivider ? "border-t border-white/[0.06]" : ""}`}>
 			<div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
 				<div>
 					<h4 className="text-sm font-semibold text-text-primary">{title}</h4>

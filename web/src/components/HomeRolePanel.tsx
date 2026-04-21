@@ -142,8 +142,12 @@ export default function HomeRolePanel({
 										key={row.id}
 										className="border-b border-white/[0.06] text-text-primary last:border-0"
 									>
-										<td className="py-3 px-3 font-mono text-text-secondary">{row.id}</td>
-										<td className="py-3 px-3 font-mono text-xs">{row.orderId}</td>
+										<td className="py-3 px-3 font-mono text-text-secondary">
+											{row.id}
+										</td>
+										<td className="py-3 px-3 font-mono text-xs">
+											{row.orderId}
+										</td>
 										<td className="py-3 px-3">{row.dropoff}</td>
 										<td className="py-3 px-3">
 											<span className="rounded-full bg-white/[0.06] px-2.5 py-0.5 text-xs text-text-secondary">
@@ -196,11 +200,15 @@ function CustomerRestaurantsBrowse({ isCustomer }: { isCustomer: boolean | null 
 			<GradientSectionTitle className="mb-0 text-center">Restaurants</GradientSectionTitle>
 
 			{!connected && (
-				<p className="text-sm text-text-secondary">Connect a wallet to load restaurants from the chain.</p>
+				<p className="text-sm text-text-secondary">
+					Connect a wallet to load restaurants from the chain.
+				</p>
 			)}
 
 			{connected && templatePallet !== true && (
-				<p className="text-sm text-text-secondary">Template pallet is not available on this endpoint.</p>
+				<p className="text-sm text-text-secondary">
+					Template pallet is not available on this endpoint.
+				</p>
 			)}
 
 			{query.isPending && connected && templatePallet === true && (
@@ -213,12 +221,16 @@ function CustomerRestaurantsBrowse({ isCustomer }: { isCustomer: boolean | null 
 
 			{query.isError && (
 				<p className="text-sm text-accent-red">
-					{query.error instanceof Error ? query.error.message : "Could not load restaurants."}
+					{query.error instanceof Error
+						? query.error.message
+						: "Could not load restaurants."}
 				</p>
 			)}
 
 			{query.isSuccess && list.length === 0 && (
-				<p className="text-sm text-text-secondary">No restaurants registered on-chain yet.</p>
+				<p className="text-sm text-text-secondary">
+					No restaurants registered on-chain yet.
+				</p>
 			)}
 
 			{query.isSuccess && list.length > 0 && (
@@ -238,7 +250,9 @@ function CustomerRestaurantsBrowse({ isCustomer }: { isCustomer: boolean | null 
 									}
 									className="w-full px-3 py-3 flex flex-col gap-0.5 items-center text-center hover:bg-white/[0.04] transition-colors"
 								>
-									<span className="font-medium text-text-primary">{displayName}</span>
+									<span className="font-medium text-text-primary">
+										{displayName}
+									</span>
 								</button>
 							</li>
 						);
@@ -296,7 +310,9 @@ function CustomerMyOrders() {
 				</p>
 			)}
 			{query.isSuccess && (!query.data || query.data.length === 0) && (
-				<p className="text-sm text-text-secondary">No orders on-chain for this account yet.</p>
+				<p className="text-sm text-text-secondary">
+					No orders on-chain for this account yet.
+				</p>
 			)}
 			{query.isSuccess && query.data && query.data.length > 0 && (
 				<ul className="mx-auto w-full max-w-md rounded-lg border border-white/[0.06] divide-y divide-white/[0.06] text-left text-sm">
@@ -310,8 +326,12 @@ function CustomerMyOrders() {
 						return (
 							<li key={String(id)} className="px-3 py-2.5 space-y-0.5">
 								<div className="flex justify-between gap-2">
-									<span className="font-mono text-xs text-text-secondary">#{String(id)}</span>
-									<span className="text-xs text-text-tertiary">{orderStatusDisplay(o.status)}</span>
+									<span className="font-mono text-xs text-text-secondary">
+										#{String(id)}
+									</span>
+									<span className="text-xs text-text-tertiary">
+										{orderStatusDisplay(o.status)}
+									</span>
 								</div>
 								<p className="text-xs text-text-secondary font-mono break-all">
 									{o.restaurant ? shortAddress(o.restaurant) : "—"}
@@ -390,13 +410,15 @@ function RestaurantOrdersPanel() {
 		<div>
 			<GradientSectionTitle>Orders</GradientSectionTitle>
 			<p className="text-xs text-text-tertiary mb-2 text-center">
-				From <code className="font-mono text-text-muted">TemplatePallet::RestaurantOrders</code> and{" "}
-				<code className="font-mono text-text-muted">Orders</code>
+				From{" "}
+				<code className="font-mono text-text-muted">TemplatePallet::RestaurantOrders</code>{" "}
+				and <code className="font-mono text-text-muted">Orders</code>
 			</p>
 
 			{menuQuery.isSuccess && menuQuery.data === undefined && (
 				<p className="text-sm text-text-secondary text-center mb-2">
-					No restaurant record for this account — register as a restaurant to receive orders.
+					No restaurant record for this account — register as a restaurant to receive
+					orders.
 				</p>
 			)}
 
@@ -409,12 +431,16 @@ function RestaurantOrdersPanel() {
 
 			{ordersQuery.isError && (
 				<p className="text-sm text-accent-red">
-					{ordersQuery.error instanceof Error ? ordersQuery.error.message : "Could not load orders."}
+					{ordersQuery.error instanceof Error
+						? ordersQuery.error.message
+						: "Could not load orders."}
 				</p>
 			)}
 
 			{ordersQuery.isSuccess && (!ordersQuery.data || ordersQuery.data.length === 0) && (
-				<p className="text-sm text-text-secondary text-center">No orders yet for this restaurant.</p>
+				<p className="text-sm text-text-secondary text-center">
+					No orders yet for this restaurant.
+				</p>
 			)}
 
 			{ordersQuery.isSuccess && ordersQuery.data && ordersQuery.data.length > 0 && (
@@ -438,17 +464,22 @@ function RestaurantOrdersPanel() {
 									status?: unknown;
 								};
 								const nextLabel = nextAdvanceActionLabel(o.status);
-								const busyThis = advanceMut.isPending && advanceMut.variables === id;
+								const busyThis =
+									advanceMut.isPending && advanceMut.variables === id;
 								return (
 									<tr
 										key={String(id)}
 										className="border-b border-white/[0.06] text-text-primary last:border-0"
 									>
-										<td className="py-3 px-3 font-mono text-text-secondary">#{String(id)}</td>
+										<td className="py-3 px-3 font-mono text-text-secondary">
+											#{String(id)}
+										</td>
 										<td className="py-3 px-3 font-mono text-xs">
 											{o.customer ? shortAddress(o.customer) : "—"}
 										</td>
-										<td className="py-3 px-3">{formatOrderLinesSummary(o.lines, menuRows)}</td>
+										<td className="py-3 px-3">
+											{formatOrderLinesSummary(o.lines, menuRows)}
+										</td>
 										<td className="py-3 px-3">
 											<span className="rounded-full bg-white/[0.06] px-2.5 py-0.5 text-xs text-text-secondary">
 												{orderStatusDisplay(o.status)}
@@ -465,7 +496,9 @@ function RestaurantOrdersPanel() {
 													{busyThis ? "Signing…" : nextLabel}
 												</button>
 											) : (
-												<span className="text-xs text-text-tertiary">Complete</span>
+												<span className="text-xs text-text-tertiary">
+													Complete
+												</span>
 											)}
 										</td>
 									</tr>
@@ -478,7 +511,9 @@ function RestaurantOrdersPanel() {
 
 			{advanceMut.isError && (
 				<p className="text-sm text-accent-red mt-2 text-center">
-					{advanceMut.error instanceof Error ? advanceMut.error.message : String(advanceMut.error)}
+					{advanceMut.error instanceof Error
+						? advanceMut.error.message
+						: String(advanceMut.error)}
 				</p>
 			)}
 		</div>
@@ -525,7 +560,8 @@ function RestaurantMenuModal({
 					quantity: quantities[i] ?? 0,
 				}))
 				.filter((l) => l.quantity > 0);
-			if (lines.length === 0) throw new Error("Select at least one item with quantity greater than zero.");
+			if (lines.length === 0)
+				throw new Error("Select at least one item with quantity greater than zero.");
 			const api = getClient(wsUrl).getTypedApi(stack_template);
 			const tx = api.tx.TemplatePallet.place_order({
 				restaurant: restaurantAddress,
@@ -560,8 +596,7 @@ function RestaurantMenuModal({
 		!!walletSigner &&
 		!signerLoading &&
 		isCustomer === true;
-	const canPlace =
-		registrationReady && menu.length > 0 && hasAnyQty && !placeMut.isPending;
+	const canPlace = registrationReady && menu.length > 0 && hasAnyQty && !placeMut.isPending;
 
 	return (
 		<div
@@ -603,14 +638,21 @@ function RestaurantMenuModal({
 							<tr className="border-b border-white/[0.1] bg-white/[0.02] text-text-tertiary text-xs uppercase tracking-wider">
 								<th className="py-2.5 px-3 font-medium">Name</th>
 								<th className="py-2.5 px-3 font-medium">Description</th>
-								<th className="py-2.5 px-3 font-medium text-right whitespace-nowrap">Price</th>
-								<th className="py-2.5 px-3 font-medium text-right whitespace-nowrap">Qty</th>
+								<th className="py-2.5 px-3 font-medium text-right whitespace-nowrap">
+									Price
+								</th>
+								<th className="py-2.5 px-3 font-medium text-right whitespace-nowrap">
+									Qty
+								</th>
 							</tr>
 						</thead>
 						<tbody>
 							{menu.length === 0 ? (
 								<tr>
-									<td colSpan={4} className="py-4 px-3 text-sm text-text-tertiary text-center">
+									<td
+										colSpan={4}
+										className="py-4 px-3 text-sm text-text-tertiary text-center"
+									>
 										No menu items on-chain.
 									</td>
 								</tr>
@@ -620,7 +662,9 @@ function RestaurantMenuModal({
 										key={`${i}-${row.name}`}
 										className="border-b border-white/[0.06] text-text-primary last:border-0"
 									>
-										<td className="py-3 px-3 font-medium align-top">{row.name || "—"}</td>
+										<td className="py-3 px-3 font-medium align-top">
+											{row.name || "—"}
+										</td>
 										<td className="py-3 px-3 text-text-secondary align-top whitespace-pre-wrap break-words">
 											{row.description || "—"}
 										</td>
@@ -634,7 +678,13 @@ function RestaurantMenuModal({
 												max={999}
 												value={quantities[i] ?? 0}
 												onChange={(e) => {
-													const v = Math.max(0, Math.min(999, Math.floor(Number(e.target.value) || 0)));
+													const v = Math.max(
+														0,
+														Math.min(
+															999,
+															Math.floor(Number(e.target.value) || 0),
+														),
+													);
 													setQuantities((prev) => {
 														const next = [...prev];
 														next[i] = v;
@@ -676,7 +726,9 @@ function RestaurantMenuModal({
 					{placeMsg && (
 						<p
 							className={`text-center text-sm font-medium ${
-								placeMsg.startsWith("Order placed") ? "text-accent-green" : "text-accent-red"
+								placeMsg.startsWith("Order placed")
+									? "text-accent-green"
+									: "text-accent-red"
 							}`}
 						>
 							{placeMsg}
@@ -718,11 +770,13 @@ function RestaurantOnChainMenu() {
 		<div>
 			<GradientSectionTitle>Menu</GradientSectionTitle>
 			<p className="text-xs text-text-tertiary mb-2 text-center">
-				From chain storage <code className="font-mono text-text-muted">TemplatePallet::Restaurants</code>
+				From chain storage{" "}
+				<code className="font-mono text-text-muted">TemplatePallet::Restaurants</code>
 				{parsed.venueName ? (
 					<>
 						{" "}
-						· venue: <span className="text-text-secondary font-medium">{parsed.venueName}</span>
+						· venue:{" "}
+						<span className="text-text-secondary font-medium">{parsed.venueName}</span>
 					</>
 				) : null}
 			</p>
@@ -753,7 +807,9 @@ function RestaurantOnChainMenu() {
 							<tr className="border-b border-white/[0.1] bg-white/[0.02] text-text-tertiary text-xs uppercase tracking-wider">
 								<th className="py-2.5 px-3 font-medium">Name</th>
 								<th className="py-2.5 px-3 font-medium">Description</th>
-								<th className="py-2.5 px-3 font-medium text-right whitespace-nowrap">Price</th>
+								<th className="py-2.5 px-3 font-medium text-right whitespace-nowrap">
+									Price
+								</th>
 							</tr>
 						</thead>
 						<tbody>
@@ -772,7 +828,9 @@ function RestaurantOnChainMenu() {
 										key={`${i}-${row.name}`}
 										className="border-b border-white/[0.06] text-text-primary last:border-0"
 									>
-										<td className="py-3 px-3 font-medium align-top">{row.name || "—"}</td>
+										<td className="py-3 px-3 font-medium align-top">
+											{row.name || "—"}
+										</td>
 										<td className="py-3 px-3 text-text-secondary align-top whitespace-pre-wrap break-words">
 											{row.description || "—"}
 										</td>
