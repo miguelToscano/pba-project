@@ -49,7 +49,7 @@ jobs:
 
   build:
     needs: check
-    if: needs.check.outputs.cache-hit != 'true' || inputs.skip-cache
+    if: needs.check.outputs.cache-hit != 'true' || inputs['skip-cache']
     runs-on: ubuntu-latest
     name: Build
     steps:
@@ -85,7 +85,7 @@ jobs:
 
   deploy:
     needs: [check, build]
-    if: needs.check.outputs.cache-hit != 'true' || inputs.skip-cache
+    if: needs.check.outputs.cache-hit != 'true' || inputs['skip-cache']
     name: Deploy
     uses: paritytech/dotns-sdk/.github/workflows/deploy.yml@main
     with:
@@ -93,7 +93,7 @@ jobs:
       mode: production
       artifact-name: frontend-build
       register-base: true
-      skip-cache: ${{ inputs.skip-cache || false }}
+      skip-cache: ${{ inputs['skip-cache'] || false }}
       max-retries: 3
     secrets:
       # Falls back to Alice's dev account if DOTNS_MNEMONIC is not set.
