@@ -361,9 +361,15 @@ function CustomerMyOrders() {
 										<table className="w-full border-collapse">
 											<thead>
 												<tr className="text-text-tertiary border-b border-white/[0.06]">
-													<th className="text-left font-medium py-1.5 px-2">Item</th>
-													<th className="text-right font-medium py-1.5 px-2 w-14">Qty</th>
-													<th className="text-right font-medium py-1.5 px-2">Total</th>
+													<th className="text-left font-medium py-1.5 px-2">
+														Item
+													</th>
+													<th className="text-right font-medium py-1.5 px-2 w-14">
+														Qty
+													</th>
+													<th className="text-right font-medium py-1.5 px-2">
+														Total
+													</th>
 												</tr>
 											</thead>
 											<tbody>
@@ -372,7 +378,9 @@ function CustomerMyOrders() {
 														key={li}
 														className="border-b border-white/[0.04] last:border-0 text-text-secondary"
 													>
-														<td className="py-1.5 px-2 text-text-primary">{line.name}</td>
+														<td className="py-1.5 px-2 text-text-primary">
+															{line.name}
+														</td>
 														<td className="py-1.5 px-2 text-right tabular-nums">
 															{line.quantity}
 														</td>

@@ -63,8 +63,7 @@ export function orderLinesWithPricing(
 		if (!parsed || parsed.qty === 0) continue;
 		const { idx, qty } = parsed;
 		const row = Number.isInteger(idx) && idx >= 0 && idx < menu.length ? menu[idx]! : null;
-		const name =
-			row?.name && row.name.length > 0 ? row.name : `Item #${idx}`;
+		const name = row?.name && row.name.length > 0 ? row.name : `Item #${idx}`;
 		const unitPrice = row?.price ?? 0n;
 		const lineTotal = unitPrice * BigInt(qty);
 		total += lineTotal;
