@@ -110,6 +110,8 @@ The JavaScript/TypeScript library for interacting with Substrate chains. PAPI pr
 ### Key patterns
 
 ```typescript
+import { signAndSubmitAwaitBestBlock } from "../web/src/utils/signAndSubmitBestBlock";
+
 // Connect
 const client = createClient(withPolkadotSdkCompat(getWsProvider(wsUrl)));
 const api = client.getTypedApi(stack_template);
@@ -117,10 +119,11 @@ const api = client.getTypedApi(stack_template);
 // Query storage
 const entries = await api.query.TemplatePallet.Claims.getEntries();
 
-// Submit extrinsic
-const result = await api.tx.TemplatePallet.create_claim({
-  hash: Binary.fromHex(fileHash),
-}).signAndSubmit(signer);
+// Submit extrinsic (best-block inclusion; faster than `tx.signAndSubmit`, which waits for finality)
+const result = await signAndSubmitAwaitBestBlock(
+  api.tx.TemplatePallet.create_claim({ hash: Binary.fromHex(fileHash) }),
+  signer,
+);
 ```
 
 Also used for Bulletin Chain interaction via a separate client with the `bulletin` descriptor. The repo now fails fast if `papi generate` fails, which makes descriptor drift easier for students and AI agents to diagnose.

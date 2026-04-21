@@ -7,11 +7,15 @@ export const MAX_MENU_ITEMS = 64;
 export const MAX_MENU_ITEM_NAME_BYTES = 64;
 export const MAX_MENU_ITEM_DESC_BYTES = 256;
 
-export type RestaurantFormMenuRow = { name: string; description: string };
+const U128_MAX = (1n << 128n) - 1n;
+
+export type RestaurantFormMenuRow = { name: string; description: string; price: string };
+
+export type RestaurantMenuItemPayload = { name: string; description: string; price: bigint };
 
 export type RestaurantRegistrationPayload = {
 	restaurantName: string;
-	menuItems: RestaurantFormMenuRow[];
+	menuItems: RestaurantMenuItemPayload[];
 };
 
 type Props = {
@@ -23,13 +27,15 @@ type Props = {
 
 export default function RegisterRestaurantModal({ open, onClose, isSubmitting, onConfirm }: Props) {
 	const [restaurantName, setRestaurantName] = useState("");
-	const [rows, setRows] = useState<RestaurantFormMenuRow[]>([{ name: "", description: "" }]);
+	const [rows, setRows] = useState<RestaurantFormMenuRow[]>([
+		{ name: "", description: "", price: "0" },
+	]);
 	const [formError, setFormError] = useState<string | null>(null);
 
 	useEffect(() => {
 		if (!open) return;
 		setRestaurantName("");
-		setRows([{ name: "", description: "" }]);
+		setRows([{ name: "", description: "", price: "0" }]);
 		setFormError(null);
 	}, [open]);
 
@@ -61,10 +67,11 @@ export default function RegisterRestaurantModal({ open, onClose, isSubmitting, o
 			return;
 		}
 
-		const menuItems: RestaurantFormMenuRow[] = [];
+		const menuItems: RestaurantMenuItemPayload[] = [];
 		for (let i = 0; i < rows.length; i++) {
 			const nm = rows[i]!.name.trim();
 			const desc = rows[i]!.description;
+			const priceStr = rows[i]!.price.trim();
 			if (!nm) continue;
 			try {
 				requireUtf8MaxBytes(nm, MAX_MENU_ITEM_NAME_BYTES, `Menu item ${i + 1} name`);
@@ -73,7 +80,22 @@ export default function RegisterRestaurantModal({ open, onClose, isSubmitting, o
 				setFormError(err instanceof Error ? err.message : String(err));
 				return;
 			}
-			menuItems.push({ name: nm, description: desc });
+			if (priceStr === "" || !/^\d+$/.test(priceStr)) {
+				setFormError(`Menu item ${i + 1}: price must be a whole number ≥ 0 (no decimals).`);
+				return;
+			}
+			let price: bigint;
+			try {
+				price = BigInt(priceStr);
+			} catch {
+				setFormError(`Menu item ${i + 1}: price is not a valid integer.`);
+				return;
+			}
+			if (price < 0n || price > U128_MAX) {
+				setFormError(`Menu item ${i + 1}: price must fit in u128 (0 … ${U128_MAX.toString()}).`);
+				return;
+			}
+			menuItems.push({ name: nm, description: desc, price });
 		}
 
 		if (menuItems.length > MAX_MENU_ITEMS) {
@@ -93,7 +115,9 @@ export default function RegisterRestaurantModal({ open, onClose, isSubmitting, o
 	}
 
 	function addRow() {
-		setRows((r) => (r.length >= MAX_MENU_ITEMS ? r : [...r, { name: "", description: "" }]));
+		setRows((r) =>
+			r.length >= MAX_MENU_ITEMS ? r : [...r, { name: "", description: "", price: "0" }],
+		);
 	}
 
 	function removeRow(index: number) {
@@ -170,7 +194,8 @@ export default function RegisterRestaurantModal({ open, onClose, isSubmitting, o
 						<p className="text-xs text-text-tertiary">
 							Include at least one item with a name. Empty rows are ignored. Max {MAX_MENU_ITEMS}{" "}
 							items; each name ≤ {MAX_MENU_ITEM_NAME_BYTES} bytes, description ≤{" "}
-							{MAX_MENU_ITEM_DESC_BYTES} bytes (UTF-8).
+							{MAX_MENU_ITEM_DESC_BYTES} bytes (UTF-8). Price is a non-negative integer (on-chain u128,
+							e.g. smallest token unit).
 						</p>
 						<div className="space-y-3">
 							{rows.map((row, index) => (
@@ -207,6 +232,19 @@ export default function RegisterRestaurantModal({ open, onClose, isSubmitting, o
 										placeholder="Description (optional)"
 										disabled={isSubmitting}
 									/>
+									<label className="block">
+										<span className="text-xs text-text-tertiary">Price (u128, whole units)</span>
+										<input
+											type="text"
+											inputMode="numeric"
+											value={row.price}
+											onChange={(e) => updateRow(index, { price: e.target.value })}
+											className="input-field w-full font-mono text-sm mt-1"
+											placeholder="0"
+											autoComplete="off"
+											disabled={isSubmitting}
+										/>
+									</label>
 								</div>
 							))}
 						</div>

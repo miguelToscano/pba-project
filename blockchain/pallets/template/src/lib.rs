@@ -65,6 +65,8 @@ pub mod pallet {
 		pub name: BoundedVec<u8, ConstU32<64>>,
 		/// Longer description (UTF-8 bytes, bounded for `MaxEncodedLen`).
 		pub description: BoundedVec<u8, ConstU32<256>>,
+		/// Item price in the smallest on-chain unit (plain `u128`; not tied to a specific token here).
+		pub price: u128,
 	}
 
 	/// A restaurant registered on-chain: display name and menu.
@@ -90,6 +92,81 @@ pub mod pallet {
 	/// A rider record registered on-chain (extensible; currently a marker type).
 	#[derive(Encode, Decode, Clone, Copy, PartialEq, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 	pub struct Rider;
+
+	/// Monotonic identifier for an [`Order`].
+	pub type OrderId = u64;
+
+	/// Maximum lines (menu index + quantity pairs) in one order.
+	pub type MaxOrderLines = ConstU32<32>;
+
+	/// Maximum order ids kept per customer or per restaurant index list.
+	pub type MaxOrderQueue = ConstU32<256>;
+
+	/// Lifecycle of an order (restaurant advances until terminal).
+	#[derive(
+		Encode,
+		Decode,
+		DecodeWithMemTracking,
+		Clone,
+		Copy,
+		PartialEq,
+		Eq,
+		RuntimeDebug,
+		TypeInfo,
+		MaxEncodedLen,
+		Default,
+	)]
+	pub enum OrderStatus {
+		/// Just placed by the customer.
+		#[default]
+		Created,
+		/// Restaurant is preparing the order.
+		InProgress,
+		/// Ready for customer pickup or rider handoff.
+		ReadyForPickup,
+		/// Out for delivery (terminal — no further transitions).
+		OnItsWay,
+	}
+
+	/// One line in an order: index into the restaurant's on-chain menu and quantity.
+	#[derive(
+		Encode,
+		Decode,
+		DecodeWithMemTracking,
+		Clone,
+		Copy,
+		PartialEq,
+		Eq,
+		RuntimeDebug,
+		TypeInfo,
+		MaxEncodedLen,
+		Default,
+	)]
+	pub struct OrderLine {
+		/// Index into [`Restaurant::menu`] at the time of ordering.
+		pub menu_index: u32,
+		pub quantity: u32,
+	}
+
+	/// A customer order: who ordered, from which restaurant, lines, and status.
+	#[derive(
+		Encode,
+		Decode,
+		DecodeWithMemTracking,
+		Clone,
+		PartialEq,
+		Eq,
+		RuntimeDebug,
+		TypeInfo,
+		MaxEncodedLen,
+	)]
+	#[scale_info(skip_type_params(T))]
+	pub struct Order<T: Config> {
+		pub customer: T::AccountId,
+		pub restaurant: T::AccountId,
+		pub lines: BoundedVec<OrderLine, MaxOrderLines>,
+		pub status: OrderStatus,
+	}
 
 	/// A proof-of-existence claim: who created it and when.
 	#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
@@ -119,6 +196,34 @@ pub mod pallet {
 	/// Registered riders (delivery): one entry per account.
 	#[pallet::storage]
 	pub type Riders<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, Rider, OptionQuery>;
+
+	/// Next [`OrderId`] to assign (starts at 0; first order gets id 0 then counter increments).
+	#[pallet::storage]
+	pub type NextOrderId<T: Config> = StorageValue<_, OrderId, ValueQuery>;
+
+	/// All orders by id.
+	#[pallet::storage]
+	pub type Orders<T: Config> = StorageMap<_, Blake2_128Concat, OrderId, Order<T>, OptionQuery>;
+
+	/// Order ids for a customer (newest appended; bounded).
+	#[pallet::storage]
+	pub type CustomerOrders<T: Config> = StorageMap<
+		_,
+		Blake2_128Concat,
+		T::AccountId,
+		BoundedVec<OrderId, MaxOrderQueue>,
+		ValueQuery,
+	>;
+
+	/// Order ids for a restaurant (newest appended; bounded).
+	#[pallet::storage]
+	pub type RestaurantOrders<T: Config> = StorageMap<
+		_,
+		Blake2_128Concat,
+		T::AccountId,
+		BoundedVec<OrderId, MaxOrderQueue>,
+		ValueQuery,
+	>;
 
 	/// Events emitted by this pallet.
 	#[pallet::event]
@@ -153,6 +258,17 @@ pub mod pallet {
 			/// The account registered as a rider.
 			who: T::AccountId,
 		},
+		/// A customer placed an order.
+		OrderPlaced {
+			order_id: OrderId,
+			customer: T::AccountId,
+			restaurant: T::AccountId,
+		},
+		/// An order's status was updated by the restaurant.
+		OrderStatusChanged {
+			order_id: OrderId,
+			status: OrderStatus,
+		},
 	}
 
 	/// Errors that can occur in this pallet.
@@ -172,6 +288,24 @@ pub mod pallet {
 		AlreadyRider,
 		/// Restaurant name must be non-empty.
 		RestaurantNameEmpty,
+		/// Caller must be registered as a customer to place an order.
+		NotRegisteredCustomer,
+		/// Target account has no restaurant record.
+		UnknownRestaurant,
+		/// Menu index is out of range for that restaurant's menu.
+		InvalidMenuIndex,
+		/// Line quantity must be greater than zero.
+		InvalidQuantity,
+		/// Order must contain at least one line.
+		EmptyOrder,
+		/// No order exists for this id.
+		UnknownOrder,
+		/// Only the restaurant operator for this order may advance status.
+		NotOrderRestaurant,
+		/// Order is already in the terminal status.
+		OrderAlreadyCompleted,
+		/// Customer or restaurant order list is full.
+		OrderQueueFull,
 	}
 
 	/// Dispatchable calls.
@@ -241,6 +375,72 @@ pub mod pallet {
 			ensure!(!Riders::<T>::contains_key(&who), Error::<T>::AlreadyRider);
 			Riders::<T>::insert(&who, Rider);
 			Self::deposit_event(Event::RiderCreated { who });
+			Ok(())
+		}
+
+		/// Place an order at `restaurant` with menu lines (indices into that restaurant's menu).
+		///
+		/// Caller must be a registered customer. Appends the new order id to both
+		/// [`CustomerOrders`] and [`RestaurantOrders`].
+		#[pallet::call_index(5)]
+		#[pallet::weight(T::WeightInfo::place_order())]
+		pub fn place_order(
+			origin: OriginFor<T>,
+			restaurant: T::AccountId,
+			lines: BoundedVec<OrderLine, MaxOrderLines>,
+		) -> DispatchResult {
+			let who = ensure_signed(origin)?;
+			ensure!(Customers::<T>::contains_key(&who), Error::<T>::NotRegisteredCustomer);
+			let venue = Restaurants::<T>::get(&restaurant).ok_or(Error::<T>::UnknownRestaurant)?;
+			ensure!(!lines.is_empty(), Error::<T>::EmptyOrder);
+			let menu_len = venue.menu.len() as u32;
+			for line in lines.iter() {
+				ensure!(line.quantity > 0, Error::<T>::InvalidQuantity);
+				ensure!(line.menu_index < menu_len, Error::<T>::InvalidMenuIndex);
+			}
+
+			let order_id = NextOrderId::<T>::get();
+			NextOrderId::<T>::put(order_id.saturating_add(1));
+
+			let order = Order {
+				customer: who.clone(),
+				restaurant: restaurant.clone(),
+				lines,
+				status: OrderStatus::Created,
+			};
+			Orders::<T>::insert(order_id, order);
+
+			CustomerOrders::<T>::try_mutate(&who, |ids| {
+				ids.try_push(order_id).map_err(|_| Error::<T>::OrderQueueFull)
+			})?;
+			RestaurantOrders::<T>::try_mutate(&restaurant, |ids| {
+				ids.try_push(order_id).map_err(|_| Error::<T>::OrderQueueFull)
+			})?;
+
+			Self::deposit_event(Event::OrderPlaced {
+				order_id,
+				customer: who,
+				restaurant,
+			});
+			Ok(())
+		}
+
+		/// Advance this order to the next status (restaurant operator only). [`OrderStatus::OnItsWay`] is terminal.
+		#[pallet::call_index(6)]
+		#[pallet::weight(T::WeightInfo::advance_order_status())]
+		pub fn advance_order_status(origin: OriginFor<T>, order_id: OrderId) -> DispatchResult {
+			let who = ensure_signed(origin)?;
+			let mut order = Orders::<T>::get(order_id).ok_or(Error::<T>::UnknownOrder)?;
+			ensure!(order.restaurant == who, Error::<T>::NotOrderRestaurant);
+			let next = match order.status {
+				OrderStatus::Created => OrderStatus::InProgress,
+				OrderStatus::InProgress => OrderStatus::ReadyForPickup,
+				OrderStatus::ReadyForPickup => OrderStatus::OnItsWay,
+				OrderStatus::OnItsWay => return Err(Error::<T>::OrderAlreadyCompleted.into()),
+			};
+			order.status = next;
+			Orders::<T>::insert(order_id, order);
+			Self::deposit_event(Event::OrderStatusChanged { order_id, status: next });
 			Ok(())
 		}
 	}

@@ -1,9 +1,8 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useAccount, usePapiSigner } from "@luno-kit/react";
 import { Binary } from "polkadot-api";
 import { stack_template } from "@polkadot-api/descriptors";
 import { useChainStore } from "../store/chainStore";
-import { useConnection } from "../hooks/useConnection";
 import { useAccountRoles } from "../hooks/useAccountRoles";
 import HomeRolePanel from "../components/HomeRolePanel";
 import RegisterRestaurantModal, {
@@ -13,8 +12,8 @@ import RegisterRestaurantModal, {
 	type RestaurantRegistrationPayload,
 } from "../components/RegisterRestaurantModal";
 import { getClient } from "../hooks/useChain";
-import { LOCAL_WS_URL, getNetworkPresetEndpoints, type NetworkPreset } from "../config/network";
 import { formatDispatchError } from "../utils/format";
+import { signAndSubmitAwaitBestBlock } from "../utils/signAndSubmitBestBlock";
 import { requireUtf8MaxBytes } from "../utils/utf8Bounds";
 
 function shortAddress(addr: string) {
@@ -25,12 +24,6 @@ export default function HomePage() {
 	const { wsUrl, connected, pallets } = useChainStore();
 	const { address: walletAddress } = useAccount();
 	const { data: walletSigner, isLoading: signerLoading } = usePapiSigner();
-	const { connect } = useConnection();
-	const [urlInput, setUrlInput] = useState(wsUrl);
-	const [error, setError] = useState<string | null>(null);
-	const [chainName, setChainName] = useState<string | null>(null);
-	const [connecting, setConnecting] = useState(false);
-
 	const [busyCustomer, setBusyCustomer] = useState(false);
 	const [busyRestaurant, setBusyRestaurant] = useState(false);
 	const [busyRider, setBusyRider] = useState(false);
@@ -53,43 +46,6 @@ export default function HomePage() {
 	const [restaurantModalOpen, setRestaurantModalOpen] = useState(false);
 	const [showRoleRegistration, setShowRoleRegistration] = useState(false);
 
-	useEffect(() => {
-		setUrlInput(wsUrl);
-	}, [wsUrl]);
-
-	useEffect(() => {
-		if (!connected) {
-			return;
-		}
-
-		getClient(wsUrl)
-			.getChainSpecData()
-			.then((data) => setChainName(data.name))
-			.catch(() => {});
-	}, [connected, wsUrl]);
-
-	async function handleConnect() {
-		setConnecting(true);
-		setError(null);
-		setChainName(null);
-		try {
-			const result = await connect(urlInput);
-			if (result?.ok && result.chain) {
-				setChainName(result.chain.name);
-			}
-		} catch (e) {
-			setError(`Could not connect to ${urlInput}. Is the chain running?`);
-			console.error(e);
-		} finally {
-			setConnecting(false);
-		}
-	}
-
-	function applyPreset(preset: NetworkPreset) {
-		const endpoints = getNetworkPresetEndpoints(preset);
-		setUrlInput(endpoints.wsUrl);
-	}
-
 	const registrationReady =
 		connected &&
 		pallets.templatePallet === true &&
@@ -105,7 +61,7 @@ export default function HomePage() {
 		try {
 			const api = getClient(wsUrl).getTypedApi(stack_template);
 			const tx = api.tx.TemplatePallet.create_customer();
-			const result = await tx.signAndSubmit(walletSigner);
+			const result = await signAndSubmitAwaitBestBlock(tx, walletSigner);
 			if (!result.ok) {
 				setMsgCustomer(`Error: ${formatDispatchError(result.dispatchError)}`);
 				return;
@@ -144,6 +100,7 @@ export default function HomePage() {
 						`Menu item “${m.name}” description`,
 					),
 				),
+				price: m.price,
 			}));
 			// Descriptor types refresh with `npx papi update` against a node running this runtime.
 			// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -151,7 +108,7 @@ export default function HomePage() {
 				name: Binary.fromBytes(nameBytes),
 				menu,
 			});
-			const result = await tx.signAndSubmit(walletSigner);
+			const result = await signAndSubmitAwaitBestBlock(tx, walletSigner);
 			if (!result.ok) {
 				throw new Error(formatDispatchError(result.dispatchError));
 			}
@@ -205,7 +162,7 @@ export default function HomePage() {
 		try {
 			const api = getClient(wsUrl).getTypedApi(stack_template);
 			const tx = api.tx.TemplatePallet.create_rider();
-			const result = await tx.signAndSubmit(walletSigner);
+			const result = await signAndSubmitAwaitBestBlock(tx, walletSigner);
 			if (!result.ok) {
 				setMsgRider(`Error: ${formatDispatchError(result.dispatchError)}`);
 				return;
@@ -264,7 +221,11 @@ export default function HomePage() {
 
 			{pallets.templatePallet === true && (
 				<>
-					<HomeRolePanel isCustomer={isCustomer} isRestaurant={isRestaurant} isRider={isRider} />
+					<HomeRolePanel
+						isCustomer={isCustomer}
+						isRestaurant={isRestaurant}
+						isRider={isRider}
+					/>
 					<div className="space-y-3">
 						<div className="flex justify-center">
 							<button
@@ -446,59 +407,5 @@ function RoleRow({
 			</div>
 			{message}
 		</div>
-	);
-}
-
-function StatusItem({ label, children }: { label: string; children: React.ReactNode }) {
-	return (
-		<div>
-			<h3 className="text-xs font-medium text-text-tertiary uppercase tracking-wider mb-1">
-				{label}
-			</h3>
-			<p className="text-lg font-semibold text-text-primary">{children}</p>
-		</div>
-	);
-}
-
-function FeatureCard({
-	title,
-	description,
-	link,
-	accentColor,
-	borderColor,
-	available,
-	unavailableReason,
-}: {
-	title: string;
-	description: string;
-	link: string;
-	accentColor: string;
-	borderColor: string;
-	available: boolean | null;
-	unavailableReason: string;
-}) {
-	if (available !== true) {
-		return (
-			<div className="card opacity-40">
-				<h3 className="text-lg font-semibold mb-2 text-text-muted font-display">{title}</h3>
-				<p className="text-sm text-text-muted">{description}</p>
-				<p className="text-xs mt-3">
-					{available === null ? (
-						<span className="text-accent-yellow">Detecting...</span>
-					) : (
-						<span className="text-accent-red">{unavailableReason}</span>
-					)}
-				</p>
-			</div>
-		);
-	}
-
-	return (
-		<a href={`#${link}`} className={`card-hover block group ${borderColor}`}>
-			<h3 className={`text-lg font-semibold mb-2 font-display ${accentColor}`}>{title}</h3>
-			<p className="text-sm text-text-secondary group-hover:text-text-primary transition-colors">
-				{description}
-			</p>
-		</a>
 	);
 }

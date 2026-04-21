@@ -1,4 +1,9 @@
-use crate::{mock::*, pallet::Error, Claims, Customers, Restaurants, Riders};
+use crate::{
+	mock::*,
+	pallet::Error,
+	Claims, CustomerOrders, Customers, MenuItem, NextOrderId, OrderLine, OrderStatus, Orders,
+	RestaurantOrders, Riders,
+};
 use frame::testing_prelude::*;
 
 fn test_hash(n: u64) -> H256 {
@@ -188,6 +193,117 @@ fn create_rider_fails_if_duplicate() {
 		assert_noop!(
 			ProofOfExistence::create_rider(RuntimeOrigin::signed(1)),
 			Error::<Test>::AlreadyRider,
+		);
+	});
+}
+
+fn sample_menu_item(label: &[u8]) -> MenuItem {
+	MenuItem {
+		name: BoundedVec::try_from(label.to_vec()).unwrap(),
+		description: BoundedVec::try_from(Vec::new()).unwrap(),
+		price: 100,
+	}
+}
+
+#[test]
+fn place_order_works_and_indexes() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(ProofOfExistence::create_customer(RuntimeOrigin::signed(1)));
+		let venue = BoundedVec::try_from(b"Cafe".to_vec()).unwrap();
+		let menu = BoundedVec::try_from(vec![sample_menu_item(b"Burger")]).unwrap();
+		assert_ok!(ProofOfExistence::create_restaurant(RuntimeOrigin::signed(2), venue, menu));
+		let lines =
+			BoundedVec::try_from(vec![OrderLine { menu_index: 0, quantity: 2 }]).unwrap();
+		assert_ok!(ProofOfExistence::place_order(RuntimeOrigin::signed(1), 2, lines));
+		assert_eq!(NextOrderId::<Test>::get(), 1);
+		let order = Orders::<Test>::get(0).unwrap();
+		assert_eq!(order.customer, 1);
+		assert_eq!(order.restaurant, 2);
+		assert_eq!(order.status, OrderStatus::Created);
+		assert_eq!(CustomerOrders::<Test>::get(1).as_slice(), &[0u64]);
+		assert_eq!(RestaurantOrders::<Test>::get(2).as_slice(), &[0u64]);
+	});
+}
+
+#[test]
+fn advance_order_status_sequential_until_terminal() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(ProofOfExistence::create_customer(RuntimeOrigin::signed(1)));
+		let venue = BoundedVec::try_from(b"Cafe".to_vec()).unwrap();
+		let menu = BoundedVec::try_from(vec![sample_menu_item(b"A")]).unwrap();
+		assert_ok!(ProofOfExistence::create_restaurant(RuntimeOrigin::signed(2), venue, menu));
+		let lines = BoundedVec::try_from(vec![OrderLine { menu_index: 0, quantity: 1 }]).unwrap();
+		assert_ok!(ProofOfExistence::place_order(RuntimeOrigin::signed(1), 2, lines));
+
+		assert_ok!(ProofOfExistence::advance_order_status(RuntimeOrigin::signed(2), 0));
+		assert_eq!(Orders::<Test>::get(0).unwrap().status, OrderStatus::InProgress);
+		assert_ok!(ProofOfExistence::advance_order_status(RuntimeOrigin::signed(2), 0));
+		assert_eq!(Orders::<Test>::get(0).unwrap().status, OrderStatus::ReadyForPickup);
+		assert_ok!(ProofOfExistence::advance_order_status(RuntimeOrigin::signed(2), 0));
+		assert_eq!(Orders::<Test>::get(0).unwrap().status, OrderStatus::OnItsWay);
+		assert_noop!(
+			ProofOfExistence::advance_order_status(RuntimeOrigin::signed(2), 0),
+			Error::<Test>::OrderAlreadyCompleted,
+		);
+	});
+}
+
+#[test]
+fn place_order_requires_customer() {
+	new_test_ext().execute_with(|| {
+		let venue = BoundedVec::try_from(b"Cafe".to_vec()).unwrap();
+		let menu = BoundedVec::try_from(vec![sample_menu_item(b"A")]).unwrap();
+		assert_ok!(ProofOfExistence::create_restaurant(RuntimeOrigin::signed(2), venue, menu));
+		let lines = BoundedVec::try_from(vec![OrderLine { menu_index: 0, quantity: 1 }]).unwrap();
+		assert_noop!(
+			ProofOfExistence::place_order(RuntimeOrigin::signed(1), 2, lines),
+			Error::<Test>::NotRegisteredCustomer,
+		);
+	});
+}
+
+#[test]
+fn place_order_rejects_bad_menu_index() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(ProofOfExistence::create_customer(RuntimeOrigin::signed(1)));
+		let venue = BoundedVec::try_from(b"Cafe".to_vec()).unwrap();
+		let menu = BoundedVec::try_from(vec![sample_menu_item(b"A")]).unwrap();
+		assert_ok!(ProofOfExistence::create_restaurant(RuntimeOrigin::signed(2), venue, menu));
+		let lines = BoundedVec::try_from(vec![OrderLine { menu_index: 5, quantity: 1 }]).unwrap();
+		assert_noop!(
+			ProofOfExistence::place_order(RuntimeOrigin::signed(1), 2, lines),
+			Error::<Test>::InvalidMenuIndex,
+		);
+	});
+}
+
+#[test]
+fn place_order_rejects_empty_lines() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(ProofOfExistence::create_customer(RuntimeOrigin::signed(1)));
+		let venue = BoundedVec::try_from(b"Cafe".to_vec()).unwrap();
+		let menu = BoundedVec::try_from(vec![sample_menu_item(b"A")]).unwrap();
+		assert_ok!(ProofOfExistence::create_restaurant(RuntimeOrigin::signed(2), venue, menu));
+		let lines = BoundedVec::default();
+		assert_noop!(
+			ProofOfExistence::place_order(RuntimeOrigin::signed(1), 2, lines),
+			Error::<Test>::EmptyOrder,
+		);
+	});
+}
+
+#[test]
+fn advance_order_status_wrong_restaurant() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(ProofOfExistence::create_customer(RuntimeOrigin::signed(1)));
+		let venue = BoundedVec::try_from(b"Cafe".to_vec()).unwrap();
+		let menu = BoundedVec::try_from(vec![sample_menu_item(b"A")]).unwrap();
+		assert_ok!(ProofOfExistence::create_restaurant(RuntimeOrigin::signed(2), venue, menu));
+		let lines = BoundedVec::try_from(vec![OrderLine { menu_index: 0, quantity: 1 }]).unwrap();
+		assert_ok!(ProofOfExistence::place_order(RuntimeOrigin::signed(1), 2, lines));
+		assert_noop!(
+			ProofOfExistence::advance_order_status(RuntimeOrigin::signed(3), 0),
+			Error::<Test>::NotOrderRestaurant,
 		);
 	});
 }

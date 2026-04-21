@@ -4,6 +4,7 @@ import { devAccounts } from "../hooks/useAccount";
 import { getClient } from "../hooks/useChain";
 import { stack_template } from "@polkadot-api/descriptors";
 import { formatDispatchError } from "../utils/format";
+import { signAndSubmitAwaitBestBlock } from "../utils/signAndSubmitBestBlock";
 import {
 	getInjectedExtensions,
 	connectInjectedExtension,
@@ -244,7 +245,7 @@ export default function AccountsPage() {
 					new_free: amount,
 				}).decodedCall,
 			});
-			const result = await tx.signAndSubmit(aliceSigner);
+			const result = await signAndSubmitAwaitBestBlock(tx, aliceSigner);
 			if (!result.ok) {
 				setFundStatus(`Error: ${formatDispatchError(result.dispatchError)}`);
 				return;
