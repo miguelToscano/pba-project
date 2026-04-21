@@ -44,6 +44,14 @@ export function applyTemplatePalletTxToQueryCache(
 		);
 	}
 
+	const deliveryClaimed = findLastEventPayloadByType(events, "OrderDeliveryClaimed");
+	if (statusChanged || deliveryClaimed) {
+		void queryClient.invalidateQueries({
+			queryKey: ["riderReadyPickupOrders"],
+			exact: false,
+		});
+	}
+
 	const placed = parseOrderPlacedFromTxEvents(events);
 	if (placed) {
 		void queryClient.invalidateQueries({

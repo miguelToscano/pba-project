@@ -15,6 +15,7 @@ import {
 	nextAdvanceActionLabel,
 	orderLinesWithPricing,
 	orderStatusDisplay,
+	orderStatusVariant,
 } from "../utils/orderCodec";
 import { formatDispatchError } from "../utils/format";
 import {
@@ -31,13 +32,6 @@ import {
 } from "../utils/templatePalletTxEvents";
 
 type RoleTab = "customer" | "restaurant" | "rider";
-
-/** Placeholder until TemplatePallet exposes deliveries on-chain. */
-const MOCK_DELIVERIES = [
-	{ id: "DLV-501", orderId: "ORD-1001", dropoff: "North Ave, 12", status: "Assigned" },
-	{ id: "DLV-502", orderId: "ORD-1002", dropoff: "Main St, 4B", status: "En route" },
-	{ id: "DLV-503", orderId: "ORD-1003", dropoff: "Harbor Rd", status: "Delivered" },
-] as const;
 
 const TAB_LABEL: Record<RoleTab, string> = {
 	customer: "Customer",
@@ -63,6 +57,194 @@ function GradientSectionTitle({
 				{children}
 			</span>
 		</h3>
+	);
+}
+
+function optionalSs58Account(value: unknown): string | null {
+	if (value === null || value === undefined) return null;
+	if (typeof value === "string") return value;
+	if (typeof value === "object" && value !== null) {
+		const v = value as { type?: unknown; __kind?: unknown; value?: unknown };
+		const kind = v.type ?? v.__kind;
+		if (kind === "Some" && typeof v.value === "string") return v.value;
+	}
+	return null;
+}
+
+function RiderReadyPickupOrders({ isRider }: { isRider: boolean | null }) {
+	const { address } = useAccount();
+	const connected = useChainStore((s) => s.connected);
+	const wsUrl = useChainStore((s) => s.wsUrl);
+	const templatePallet = useChainStore((s) => s.pallets.templatePallet);
+	const queryClient = useQueryClient();
+	const { data: walletSigner, isLoading: signerLoading } = usePapiSigner();
+	const [claimMsg, setClaimMsg] = useState<string | null>(null);
+
+	const query = useQuery({
+		queryKey: ["riderReadyPickupOrders", wsUrl],
+		queryFn: async () => {
+			const api = getClient(wsUrl).getTypedApi(stack_template);
+			const nextRaw = await api.query.TemplatePallet.NextOrderId.getValue();
+			const nextId = toOrderId(nextRaw);
+			if (nextId === null || nextId === 0n) return [];
+
+			type Row = {
+				id: bigint;
+				customer: string;
+				restaurant: string;
+				assignedRider: string | null;
+			};
+			const rows: Row[] = [];
+			for (let id = 0n; id < nextId; id += 1n) {
+				const order = await api.query.TemplatePallet.Orders.getValue(id);
+				if (!order) continue;
+				const o = order as {
+					customer?: unknown;
+					restaurant?: unknown;
+					status?: unknown;
+					assigned_rider?: unknown;
+				};
+				if (orderStatusVariant(o.status) !== "ReadyForPickup") continue;
+				const customer = typeof o.customer === "string" ? o.customer : null;
+				const restaurant = typeof o.restaurant === "string" ? o.restaurant : null;
+				if (!customer || !restaurant) continue;
+				rows.push({
+					id,
+					customer,
+					restaurant,
+					assignedRider: optionalSs58Account(o.assigned_rider),
+				});
+			}
+			rows.sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+			return rows;
+		},
+		enabled: Boolean(connected && templatePallet === true),
+		staleTime: 10_000,
+	});
+
+	const claimMut = useMutation({
+		mutationFn: async (orderId: bigint) => {
+			if (!walletSigner) throw new Error("Connect a wallet and approve signing.");
+			const api = getClient(wsUrl).getTypedApi(stack_template);
+			const tx = api.tx.TemplatePallet.claim_order_delivery({ order_id: orderId });
+			const result = await signAndSubmitAwaitBestBlock(tx, walletSigner);
+			if (!result.ok) {
+				throw new Error(formatDispatchError(result.dispatchError));
+			}
+			return result;
+		},
+		onMutate: () => {
+			setClaimMsg(null);
+		},
+		onSuccess: (result) => {
+			applyTemplatePalletTxToQueryCache(
+				{ queryClient, wsUrl, walletAddress: address ?? undefined },
+				result,
+			);
+			void queryClient.invalidateQueries({ queryKey: ["riderReadyPickupOrders", wsUrl] });
+		},
+		onError: (e) => {
+			setClaimMsg(e instanceof Error ? e.message : String(e));
+		},
+	});
+
+	const canAttemptClaim =
+		connected &&
+		templatePallet === true &&
+		!!address &&
+		!!walletSigner &&
+		!signerLoading &&
+		isRider === true;
+
+	return (
+		<div className="space-y-3">
+			<GradientSectionTitle>Ready for pickup</GradientSectionTitle>
+			<p className="text-xs text-text-tertiary mb-2 text-center">
+				On-chain orders in <span className="font-medium text-text-secondary">Ready for pickup</span>{" "}
+				(restaurant has marked the order ready; rider assignment is shown when set).
+			</p>
+			{isRider !== true && (
+				<p className="text-xs text-text-secondary text-center">
+					Register as a rider (role registration above) to claim orders here.
+				</p>
+			)}
+			{claimMsg && (
+				<p className="text-sm text-accent-red text-center">{claimMsg}</p>
+			)}
+			{query.isPending && (
+				<div className="mx-auto w-full rounded-lg border border-white/[0.06] p-6 animate-pulse h-24" />
+			)}
+			{query.isError && (
+				<p className="text-sm text-accent-red text-center">
+					{query.error instanceof Error ? query.error.message : "Could not load orders."}
+				</p>
+			)}
+			{query.isSuccess && query.data.length === 0 && (
+				<p className="text-sm text-text-secondary text-center">
+					No orders are ready for pickup right now.
+				</p>
+			)}
+			{query.isSuccess && query.data.length > 0 && (
+				<div className="overflow-x-auto rounded-lg border border-white/[0.06]">
+					<table className="w-full text-left text-sm border-collapse">
+						<thead>
+							<tr className="border-b border-white/[0.1] bg-white/[0.02] text-text-tertiary text-xs uppercase tracking-wider">
+								<th className="py-2.5 px-3 font-medium">Order</th>
+								<th className="py-2.5 px-3 font-medium">Customer</th>
+								<th className="py-2.5 px-3 font-medium">Restaurant</th>
+								<th className="py-2.5 px-3 font-medium">Assigned rider</th>
+								<th className="py-2.5 px-3 font-medium">Status</th>
+								<th className="py-2.5 px-3 font-medium">Action</th>
+							</tr>
+						</thead>
+						<tbody>
+							{query.data.map((row) => (
+								<tr
+									key={row.id.toString()}
+									className="border-b border-white/[0.06] text-text-primary last:border-0"
+								>
+									<td className="py-3 px-3 font-mono text-xs text-text-secondary">
+										#{row.id.toString()}
+									</td>
+									<td className="py-3 px-3 font-mono text-xs">{shortAddress(row.customer)}</td>
+									<td className="py-3 px-3 font-mono text-xs">
+										{shortAddress(row.restaurant)}
+									</td>
+									<td className="py-3 px-3 text-xs text-text-secondary">
+										{row.assignedRider ? shortAddress(row.assignedRider) : "—"}
+									</td>
+									<td className="py-3 px-3">
+										<span className="rounded-full bg-white/[0.06] px-2.5 py-0.5 text-xs text-text-secondary">
+											Ready for pickup
+										</span>
+									</td>
+									<td className="py-3 px-3 whitespace-nowrap">
+										{row.assignedRider ? (
+											<span className="text-xs text-text-tertiary">
+												{address && row.assignedRider === address
+													? "Yours"
+													: "Claimed"}
+											</span>
+										) : (
+											<button
+												type="button"
+												disabled={!canAttemptClaim || claimMut.isPending}
+												onClick={() => void claimMut.mutateAsync(row.id)}
+												className="btn-secondary text-xs px-2.5 py-1 disabled:opacity-40 disabled:cursor-not-allowed"
+											>
+												{claimMut.isPending && claimMut.variables === row.id
+													? "Signing…"
+													: "Claim"}
+											</button>
+										)}
+									</td>
+								</tr>
+							))}
+						</tbody>
+					</table>
+				</div>
+			)}
+		</div>
 	);
 }
 
@@ -132,47 +314,7 @@ export default function HomeRolePanel({
 				</div>
 			)}
 
-			{activeTab === "rider" && (
-				<div className="space-y-3">
-					<GradientSectionTitle>Deliveries</GradientSectionTitle>
-					<p className="text-xs text-text-tertiary mb-2 text-center">
-						Illustrative rows only — no delivery storage in the pallet yet.
-					</p>
-					<div className="overflow-x-auto rounded-lg border border-white/[0.06]">
-						<table className="w-full text-left text-sm border-collapse">
-							<thead>
-								<tr className="border-b border-white/[0.1] bg-white/[0.02] text-text-tertiary text-xs uppercase tracking-wider">
-									<th className="py-2.5 px-3 font-medium">Delivery ID</th>
-									<th className="py-2.5 px-3 font-medium">Order</th>
-									<th className="py-2.5 px-3 font-medium">Drop-off</th>
-									<th className="py-2.5 px-3 font-medium">Status</th>
-								</tr>
-							</thead>
-							<tbody>
-								{MOCK_DELIVERIES.map((row) => (
-									<tr
-										key={row.id}
-										className="border-b border-white/[0.06] text-text-primary last:border-0"
-									>
-										<td className="py-3 px-3 font-mono text-text-secondary">
-											{row.id}
-										</td>
-										<td className="py-3 px-3 font-mono text-xs">
-											{row.orderId}
-										</td>
-										<td className="py-3 px-3">{row.dropoff}</td>
-										<td className="py-3 px-3">
-											<span className="rounded-full bg-white/[0.06] px-2.5 py-0.5 text-xs text-text-secondary">
-												{row.status}
-											</span>
-										</td>
-									</tr>
-								))}
-							</tbody>
-						</table>
-					</div>
-				</div>
-			)}
+			{activeTab === "rider" && <RiderReadyPickupOrders isRider={isRider} />}
 		</div>
 	);
 }
