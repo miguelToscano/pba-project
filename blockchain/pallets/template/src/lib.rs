@@ -166,6 +166,8 @@ pub mod pallet {
 		pub restaurant: T::AccountId,
 		pub lines: BoundedVec<OrderLine, MaxOrderLines>,
 		pub status: OrderStatus,
+		/// Rider assigned to deliver the order (if claimed).
+		pub assigned_rider: Option<T::AccountId>,
 	}
 
 	/// A proof-of-existence claim: who created it and when.
@@ -269,6 +271,11 @@ pub mod pallet {
 			order_id: OrderId,
 			status: OrderStatus,
 		},
+		/// A rider claimed an order for delivery.
+		OrderDeliveryClaimed {
+			order_id: OrderId,
+			rider: T::AccountId,
+		},
 	}
 
 	/// Errors that can occur in this pallet.
@@ -290,6 +297,8 @@ pub mod pallet {
 		RestaurantNameEmpty,
 		/// Caller must be registered as a customer to place an order.
 		NotRegisteredCustomer,
+		/// Caller must be registered as a rider to claim or start a delivery.
+		NotRegisteredRider,
 		/// Target account has no restaurant record.
 		UnknownRestaurant,
 		/// Menu index is out of range for that restaurant's menu.
@@ -304,6 +313,14 @@ pub mod pallet {
 		NotOrderRestaurant,
 		/// Order is already in the terminal status.
 		OrderAlreadyCompleted,
+		/// This order is not in `ReadyForPickup`, so it cannot be claimed or started.
+		OrderNotReadyForPickup,
+		/// This order has already been claimed by a rider.
+		OrderAlreadyClaimedByRider,
+		/// Caller is not the rider assigned to this order.
+		NotAssignedRider,
+		/// Restaurant cannot advance an order past `ReadyForPickup`.
+		OrderAwaitingRiderPickup,
 		/// Customer or restaurant order list is full.
 		OrderQueueFull,
 	}
@@ -407,6 +424,7 @@ pub mod pallet {
 				restaurant: restaurant.clone(),
 				lines,
 				status: OrderStatus::Created,
+				assigned_rider: None,
 			};
 			Orders::<T>::insert(order_id, order);
 
@@ -435,12 +453,54 @@ pub mod pallet {
 			let next = match order.status {
 				OrderStatus::Created => OrderStatus::InProgress,
 				OrderStatus::InProgress => OrderStatus::ReadyForPickup,
-				OrderStatus::ReadyForPickup => OrderStatus::OnItsWay,
+				OrderStatus::ReadyForPickup => return Err(Error::<T>::OrderAwaitingRiderPickup.into()),
 				OrderStatus::OnItsWay => return Err(Error::<T>::OrderAlreadyCompleted.into()),
 			};
 			order.status = next;
 			Orders::<T>::insert(order_id, order);
 			Self::deposit_event(Event::OrderStatusChanged { order_id, status: next });
+			Ok(())
+		}
+
+		/// Claim an order for delivery as a rider. Only `ReadyForPickup` orders may be claimed.
+		#[pallet::call_index(7)]
+		#[pallet::weight(T::WeightInfo::claim_order_delivery())]
+		pub fn claim_order_delivery(origin: OriginFor<T>, order_id: OrderId) -> DispatchResult {
+			let who = ensure_signed(origin)?;
+			ensure!(Riders::<T>::contains_key(&who), Error::<T>::NotRegisteredRider);
+
+			let mut order = Orders::<T>::get(order_id).ok_or(Error::<T>::UnknownOrder)?;
+			ensure!(order.status == OrderStatus::ReadyForPickup, Error::<T>::OrderNotReadyForPickup);
+			ensure!(order.assigned_rider.is_none(), Error::<T>::OrderAlreadyClaimedByRider);
+
+			order.assigned_rider = Some(who.clone());
+			Orders::<T>::insert(order_id, order);
+			Self::deposit_event(Event::OrderDeliveryClaimed { order_id, rider: who });
+			Ok(())
+		}
+
+		/// Confirm pickup and start delivery as the assigned rider.
+		///
+		/// Moves the order to the terminal `OnItsWay` status.
+		#[pallet::call_index(8)]
+		#[pallet::weight(T::WeightInfo::confirm_delivery_pickup())]
+		pub fn confirm_delivery_pickup(origin: OriginFor<T>, order_id: OrderId) -> DispatchResult {
+			let who = ensure_signed(origin)?;
+			ensure!(Riders::<T>::contains_key(&who), Error::<T>::NotRegisteredRider);
+
+			let mut order = Orders::<T>::get(order_id).ok_or(Error::<T>::UnknownOrder)?;
+			ensure!(order.status == OrderStatus::ReadyForPickup, Error::<T>::OrderNotReadyForPickup);
+			ensure!(
+				order.assigned_rider.as_ref() == Some(&who),
+				Error::<T>::NotAssignedRider
+			);
+
+			order.status = OrderStatus::OnItsWay;
+			Orders::<T>::insert(order_id, order);
+			Self::deposit_event(Event::OrderStatusChanged {
+				order_id,
+				status: OrderStatus::OnItsWay,
+			});
 			Ok(())
 		}
 	}

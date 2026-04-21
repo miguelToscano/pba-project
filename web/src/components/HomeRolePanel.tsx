@@ -12,6 +12,7 @@ import {
 import {
 	formatOrderLinesSummary,
 	nextAdvanceActionLabel,
+	orderLinesWithPricing,
 	orderStatusDisplay,
 } from "../utils/orderCodec";
 import { formatDispatchError } from "../utils/format";
@@ -289,7 +290,25 @@ function CustomerMyOrders() {
 			const orders = await Promise.all(
 				ids.map((id) => api.query.TemplatePallet.Orders.getValue(id)),
 			);
-			return ids.map((id, i) => ({ id, order: orders[i] }));
+			const base = ids.map((id, i) => ({ id, order: orders[i] }));
+			const restaurantAddrs = new Set<string>();
+			for (const row of base) {
+				const o = row.order as { restaurant?: unknown } | undefined;
+				if (o && typeof o.restaurant === "string") restaurantAddrs.add(o.restaurant);
+			}
+			const menuEntries = await Promise.all(
+				[...restaurantAddrs].map(async (restaurant) => {
+					const raw = await api.query.TemplatePallet.Restaurants.getValue(restaurant);
+					return [restaurant, parseRestaurantValue(raw).menu] as const;
+				}),
+			);
+			const menuByRestaurant = new Map<string, ParsedMenuRow[]>(menuEntries);
+			return base.map((row) => {
+				const o = row.order as { restaurant?: unknown } | undefined;
+				const r = o && typeof o.restaurant === "string" ? o.restaurant : null;
+				const menu = r ? (menuByRestaurant.get(r) ?? []) : [];
+				return { ...row, menu };
+			});
 		},
 		enabled: Boolean(address && connected && templatePallet === true),
 		staleTime: 10_000,
@@ -316,15 +335,16 @@ function CustomerMyOrders() {
 			)}
 			{query.isSuccess && query.data && query.data.length > 0 && (
 				<ul className="mx-auto w-full max-w-md rounded-lg border border-white/[0.06] divide-y divide-white/[0.06] text-left text-sm">
-					{query.data.map(({ id, order }) => {
+					{query.data.map(({ id, order, menu }) => {
 						if (!order) return null;
 						const o = order as {
 							restaurant?: string;
 							lines?: unknown;
 							status?: unknown;
 						};
+						const { lines: lineDetails, total } = orderLinesWithPricing(o.lines, menu);
 						return (
-							<li key={String(id)} className="px-3 py-2.5 space-y-0.5">
+							<li key={String(id)} className="px-3 py-2.5 space-y-2">
 								<div className="flex justify-between gap-2">
 									<span className="font-mono text-xs text-text-secondary">
 										#{String(id)}
@@ -336,6 +356,45 @@ function CustomerMyOrders() {
 								<p className="text-xs text-text-secondary font-mono break-all">
 									{o.restaurant ? shortAddress(o.restaurant) : "—"}
 								</p>
+								{lineDetails.length > 0 ? (
+									<div className="rounded-md border border-white/[0.06] bg-white/[0.02] overflow-hidden text-xs">
+										<table className="w-full border-collapse">
+											<thead>
+												<tr className="text-text-tertiary border-b border-white/[0.06]">
+													<th className="text-left font-medium py-1.5 px-2">Item</th>
+													<th className="text-right font-medium py-1.5 px-2 w-14">Qty</th>
+													<th className="text-right font-medium py-1.5 px-2">Total</th>
+												</tr>
+											</thead>
+											<tbody>
+												{lineDetails.map((line, li) => (
+													<tr
+														key={li}
+														className="border-b border-white/[0.04] last:border-0 text-text-secondary"
+													>
+														<td className="py-1.5 px-2 text-text-primary">{line.name}</td>
+														<td className="py-1.5 px-2 text-right tabular-nums">
+															{line.quantity}
+														</td>
+														<td className="py-1.5 px-2 text-right tabular-nums font-mono">
+															{formatMenuPriceUnits(line.lineTotal)}
+														</td>
+													</tr>
+												))}
+											</tbody>
+										</table>
+										<div className="flex justify-between gap-2 border-t border-white/[0.06] py-1.5 px-2 font-medium text-text-primary">
+											<span>Total</span>
+											<span className="font-mono tabular-nums">
+												{formatMenuPriceUnits(total)}
+											</span>
+										</div>
+									</div>
+								) : (
+									<p className="text-xs text-text-tertiary">
+										{formatOrderLinesSummary(o.lines, menu)}
+									</p>
+								)}
 							</li>
 						);
 					})}

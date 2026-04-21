@@ -34,6 +34,8 @@ pub trait WeightInfo {
 	fn create_rider() -> Weight;
 	fn place_order() -> Weight;
 	fn advance_order_status() -> Weight;
+	fn claim_order_delivery() -> Weight;
+	fn confirm_delivery_pickup() -> Weight;
 }
 
 /// Weights for pallet_template using the Substrate node and recommended hardware.
@@ -87,6 +89,20 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 			.saturating_add(T::DbWeight::get().reads(1_u64))
 			.saturating_add(T::DbWeight::get().writes(1_u64))
 	}
+
+	/// Storage: `TemplatePallet::Riders`, `TemplatePallet::Orders`
+	fn claim_order_delivery() -> Weight {
+		Weight::from_parts(20_000_000, 1489)
+			.saturating_add(T::DbWeight::get().reads(2_u64))
+			.saturating_add(T::DbWeight::get().writes(1_u64))
+	}
+
+	/// Storage: `TemplatePallet::Riders`, `TemplatePallet::Orders`
+	fn confirm_delivery_pickup() -> Weight {
+		Weight::from_parts(20_000_000, 1489)
+			.saturating_add(T::DbWeight::get().reads(2_u64))
+			.saturating_add(T::DbWeight::get().writes(1_u64))
+	}
 }
 
 /// For backwards compatibility and tests.
@@ -130,6 +146,18 @@ impl WeightInfo for () {
 	fn advance_order_status() -> Weight {
 		Weight::from_parts(18_000_000, 1489)
 			.saturating_add(RocksDbWeight::get().reads(1_u64))
+			.saturating_add(RocksDbWeight::get().writes(1_u64))
+	}
+
+	fn claim_order_delivery() -> Weight {
+		Weight::from_parts(20_000_000, 1489)
+			.saturating_add(RocksDbWeight::get().reads(2_u64))
+			.saturating_add(RocksDbWeight::get().writes(1_u64))
+	}
+
+	fn confirm_delivery_pickup() -> Weight {
+		Weight::from_parts(20_000_000, 1489)
+			.saturating_add(RocksDbWeight::get().reads(2_u64))
 			.saturating_add(RocksDbWeight::get().writes(1_u64))
 	}
 }

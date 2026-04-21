@@ -34,19 +34,58 @@ export function nextAdvanceActionLabel(status: unknown): string | null {
 	return ADVANCE_LABEL[v] ?? "Advance status";
 }
 
+function parseLineIndexAndQty(line: unknown): { idx: number; qty: number } | null {
+	if (line === null || typeof line !== "object") return null;
+	const rec = line as { menu_index?: unknown; quantity?: unknown };
+	const idx = typeof rec.menu_index === "number" ? rec.menu_index : Number(rec.menu_index);
+	const qty = typeof rec.quantity === "number" ? rec.quantity : Number(rec.quantity);
+	if (!Number.isInteger(idx) || idx < 0 || !Number.isInteger(qty) || qty < 0) return null;
+	return { idx, qty };
+}
+
+export type OrderLineDetail = {
+	name: string;
+	quantity: number;
+	unitPrice: bigint;
+	lineTotal: bigint;
+};
+
+/** Per-line names, quantities, unit price, line total, and order total (smallest units). */
+export function orderLinesWithPricing(
+	lines: unknown,
+	menu: ParsedMenuRow[],
+): { lines: OrderLineDetail[]; total: bigint } {
+	if (!Array.isArray(lines) || lines.length === 0) return { lines: [], total: 0n };
+	const out: OrderLineDetail[] = [];
+	let total = 0n;
+	for (const line of lines) {
+		const parsed = parseLineIndexAndQty(line);
+		if (!parsed || parsed.qty === 0) continue;
+		const { idx, qty } = parsed;
+		const row = Number.isInteger(idx) && idx >= 0 && idx < menu.length ? menu[idx]! : null;
+		const name =
+			row?.name && row.name.length > 0 ? row.name : `Item #${idx}`;
+		const unitPrice = row?.price ?? 0n;
+		const lineTotal = unitPrice * BigInt(qty);
+		total += lineTotal;
+		out.push({ name, quantity: qty, unitPrice, lineTotal });
+	}
+	return { lines: out, total };
+}
+
 /** Human-readable line summary using menu labels when available. */
 export function formatOrderLinesSummary(lines: unknown, menu: ParsedMenuRow[]): string {
 	if (!Array.isArray(lines) || lines.length === 0) return "—";
 	const parts: string[] = [];
 	for (const line of lines) {
-		const rec = line as { menu_index?: unknown; quantity?: unknown };
-		const idx = typeof rec.menu_index === "number" ? rec.menu_index : Number(rec.menu_index);
-		const qty = typeof rec.quantity === "number" ? rec.quantity : Number(rec.quantity);
+		const parsed = parseLineIndexAndQty(line);
+		if (!parsed || parsed.qty === 0) continue;
+		const { idx, qty } = parsed;
 		const label =
 			Number.isInteger(idx) && idx >= 0 && idx < menu.length
 				? menu[idx]!.name || `Item ${idx}`
 				: `#${idx}`;
 		parts.push(`${qty}× ${label}`);
 	}
-	return parts.join(", ");
+	return parts.length ? parts.join(", ") : "—";
 }
