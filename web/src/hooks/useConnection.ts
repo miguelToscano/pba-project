@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef } from "react";
+import { distinctUntilChanged, filter, map } from "rxjs/operators";
 import { getClient, disconnectClient } from "./useChain";
 import { useChainStore } from "../store/chainStore";
 
@@ -97,9 +98,20 @@ export function useConnectionManagement() {
 		}
 
 		const client = getClient(wsUrl);
-		const subscription = client.finalizedBlock$.subscribe((block) => {
-			setBlockNumber(block.number);
-		});
+		// Best chain head (inclusive of unfinalized blocks). `finalizedBlock$` lags relay finality.
+		const subscription = client.bestBlocks$
+			.pipe(
+				map((blocks) => {
+					if (!Array.isArray(blocks) || blocks.length === 0) return undefined;
+					const tip = blocks.reduce((a, b) => (a.number > b.number ? a : b));
+					return tip.number;
+				}),
+				filter((n): n is number => typeof n === "number"),
+				distinctUntilChanged(),
+			)
+			.subscribe((n) => {
+				setBlockNumber(n);
+			});
 
 		return () => {
 			subscription.unsubscribe();

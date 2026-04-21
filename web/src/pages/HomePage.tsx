@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAccount, usePapiSigner } from "@luno-kit/react";
 import { Binary } from "polkadot-api";
 import { stack_template } from "@polkadot-api/descriptors";
@@ -14,6 +15,7 @@ import RegisterRestaurantModal, {
 import { getClient } from "../hooks/useChain";
 import { formatDispatchError } from "../utils/format";
 import { signAndSubmitAwaitBestBlock } from "../utils/signAndSubmitBestBlock";
+import { applyTemplatePalletTxToQueryCache } from "../utils/templatePalletQueryCache";
 import { requireUtf8MaxBytes } from "../utils/utf8Bounds";
 
 function shortAddress(addr: string) {
@@ -41,7 +43,8 @@ export default function HomePage() {
 
 	const anyRegisterBusy = busyCustomer || busyRestaurant || busyRider;
 
-	const { isCustomer, isRestaurant, isRider, refetch: refetchRoles } = useAccountRoles();
+	const queryClient = useQueryClient();
+	const { isCustomer, isRestaurant, isRider } = useAccountRoles();
 
 	const [restaurantModalOpen, setRestaurantModalOpen] = useState(false);
 	const [showRoleRegistration, setShowRoleRegistration] = useState(false);
@@ -67,7 +70,10 @@ export default function HomePage() {
 				return;
 			}
 			setMsgCustomer("You are registered as a customer.");
-			await refetchRoles();
+			applyTemplatePalletTxToQueryCache(
+				{ queryClient, wsUrl, walletAddress: walletAddress ?? undefined },
+				result,
+			);
 		} catch (e) {
 			console.error(e);
 			setMsgCustomer(`Error: ${e instanceof Error ? e.message : String(e)}`);
@@ -114,7 +120,10 @@ export default function HomePage() {
 			}
 			setRestaurantModalOpen(false);
 			setMsgRestaurant("You are registered as a restaurant.");
-			await refetchRoles();
+			applyTemplatePalletTxToQueryCache(
+				{ queryClient, wsUrl, walletAddress: walletAddress ?? undefined },
+				result,
+			);
 		} catch (e) {
 			console.error(e);
 			throw e instanceof Error ? e : new Error(String(e));
@@ -168,7 +177,10 @@ export default function HomePage() {
 				return;
 			}
 			setMsgRider("You are registered as a rider.");
-			await refetchRoles();
+			applyTemplatePalletTxToQueryCache(
+				{ queryClient, wsUrl, walletAddress: walletAddress ?? undefined },
+				result,
+			);
 		} catch (e) {
 			console.error(e);
 			setMsgRider(`Error: ${e instanceof Error ? e.message : String(e)}`);

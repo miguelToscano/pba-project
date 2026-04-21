@@ -16,6 +16,7 @@ import {
 } from "../utils/orderCodec";
 import { formatDispatchError } from "../utils/format";
 import { signAndSubmitAwaitBestBlock } from "../utils/signAndSubmitBestBlock";
+import { applyTemplatePalletTxToQueryCache } from "../utils/templatePalletQueryCache";
 
 type RoleTab = "customer" | "restaurant" | "rider";
 
@@ -372,9 +373,13 @@ function RestaurantOrdersPanel() {
 			if (!result.ok) {
 				throw new Error(formatDispatchError(result.dispatchError));
 			}
+			return result;
 		},
-		onSuccess: () => {
-			void queryClient.invalidateQueries({ queryKey: ["restaurantOrders", address, wsUrl] });
+		onSuccess: (result) => {
+			applyTemplatePalletTxToQueryCache(
+				{ queryClient, wsUrl, walletAddress: address ?? undefined },
+				result,
+			);
 		},
 	});
 
@@ -530,16 +535,17 @@ function RestaurantMenuModal({
 			if (!result.ok) {
 				throw new Error(formatDispatchError(result.dispatchError));
 			}
+			return result;
 		},
 		onMutate: () => {
 			setPlaceMsg(null);
 		},
-		onSuccess: () => {
+		onSuccess: (result) => {
 			setPlaceMsg("Order placed.");
-			void queryClient.invalidateQueries({ queryKey: ["customerRestaurantsList", wsUrl] });
-			void queryClient.invalidateQueries({ queryKey: ["customerMyOrders", address, wsUrl] });
-			void queryClient.invalidateQueries({ queryKey: ["restaurantOrders", restaurantAddress, wsUrl] });
-			void queryClient.invalidateQueries({ queryKey: ["restaurantOrders"] });
+			applyTemplatePalletTxToQueryCache(
+				{ queryClient, wsUrl, walletAddress: address ?? undefined },
+				result,
+			);
 		},
 		onError: (e) => {
 			setPlaceMsg(e instanceof Error ? e.message : String(e));
