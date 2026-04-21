@@ -1,10 +1,12 @@
 import { Binary } from "polkadot-api";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAccount, usePapiSigner } from "@luno-kit/react";
 import { stack_template } from "@polkadot-api/descriptors";
 import { useChainStore } from "../store/chainStore";
 import { getClient } from "../hooks/useChain";
+import { bytesToHex, ss58ToPublicKey } from "../utils/chatCodec";
 import {
 	formatMenuPriceUnits,
 	parseRestaurantValue,
@@ -38,6 +40,19 @@ const TAB_LABEL: Record<RoleTab, string> = {
 
 function shortAddress(addr: string) {
 	return `${addr.slice(0, 8)}…${addr.slice(-6)}`;
+}
+
+/**
+ * Compare two ss58 addresses by public key, so that different network
+ * prefixes (dev=42, polkadot=0, kusama=2, …) don't produce false negatives.
+ */
+function sameAccount(a: string | null | undefined, b: string | null | undefined): boolean {
+	if (!a || !b) return false;
+	try {
+		return bytesToHex(ss58ToPublicKey(a)) === bytesToHex(ss58ToPublicKey(b));
+	} catch {
+		return false;
+	}
 }
 
 /** Same gradient treatment as “Eats” in the hero (`Polkadot Eats`). */
@@ -155,7 +170,7 @@ function RiderReadyPickupOrders({ isRider }: { isRider: boolean | null }) {
 
 	return (
 		<div className="space-y-3">
-			<GradientSectionTitle>Ready for pickup</GradientSectionTitle>
+			<GradientSectionTitle>Available Orders</GradientSectionTitle>
 			<p className="text-xs text-text-tertiary mb-2 text-center">
 				On-chain orders in{" "}
 				<span className="font-medium text-text-secondary">Ready for pickup</span>{" "}
@@ -218,11 +233,18 @@ function RiderReadyPickupOrders({ isRider }: { isRider: boolean | null }) {
 									</td>
 									<td className="py-3 px-3 whitespace-nowrap">
 										{row.assignedRider ? (
-											<span className="text-xs text-text-tertiary">
-												{address && row.assignedRider === address
-													? "Yours"
-													: "Claimed"}
-											</span>
+											sameAccount(row.assignedRider, address) ? (
+												<Link
+													to={`/chat/${row.id.toString()}`}
+													className="btn-secondary text-xs px-2.5 py-1 inline-block"
+												>
+													Chat
+												</Link>
+											) : (
+												<span className="text-xs text-text-tertiary">
+													Claimed
+												</span>
+											)
 										) : (
 											<button
 												type="button"
@@ -455,10 +477,13 @@ function CustomerMyOrders() {
 			);
 			const menuByRestaurant = new Map<string, ParsedMenuRow[]>(menuEntries);
 			return base.map((row) => {
-				const o = row.order as { restaurant?: unknown } | undefined;
+				const o = row.order as
+					| { restaurant?: unknown; assigned_rider?: unknown }
+					| undefined;
 				const r = o && typeof o.restaurant === "string" ? o.restaurant : null;
 				const menu = r ? (menuByRestaurant.get(r) ?? []) : [];
-				return { ...row, menu };
+				const assignedRider = o ? optionalSs58Account(o.assigned_rider) : null;
+				return { ...row, menu, assignedRider };
 			});
 		},
 		enabled: Boolean(address && connected && templatePallet === true),
@@ -486,7 +511,7 @@ function CustomerMyOrders() {
 			)}
 			{query.isSuccess && query.data && query.data.length > 0 && (
 				<ul className="mx-auto w-full max-w-md rounded-lg border border-white/[0.06] divide-y divide-white/[0.06] text-left text-sm">
-					{query.data.map(({ id, order, menu }) => {
+					{query.data.map(({ id, order, menu, assignedRider }) => {
 						if (!order) return null;
 						const o = order as {
 							restaurant?: string;
@@ -520,6 +545,22 @@ function CustomerMyOrders() {
 								<p className="text-xs text-text-secondary font-mono break-all">
 									{o.restaurant ? shortAddress(o.restaurant) : "—"}
 								</p>
+								{assignedRider && (
+									<div className="flex items-center justify-between gap-2">
+										<p className="text-xs text-text-tertiary">
+											Rider:{" "}
+											<span className="font-mono text-text-secondary">
+												{shortAddress(assignedRider)}
+											</span>
+										</p>
+										<Link
+											to={`/chat/${String(id)}`}
+											className="btn-secondary text-xs px-2 py-1"
+										>
+											Chat
+										</Link>
+									</div>
+								)}
 								{lineDetails.length > 0 ? (
 									<div className="rounded-md border border-white/[0.06] bg-white/[0.02] overflow-hidden text-xs">
 										<table className="w-full border-collapse">

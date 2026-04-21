@@ -57,21 +57,57 @@ function encodeProofField(publicKey: Uint8Array, signature: Uint8Array): Uint8Ar
 	return concatBytes([u8.enc(FIELD_TAG_AUTH), encodeSr25519Proof(publicKey, signature)]);
 }
 
-function buildStatementSignaturePayload(data: Uint8Array): Uint8Array {
-	// Matches sp_statement_store::Statement::encoded(true) for a data-only statement.
-	return encodeDataField(data);
+function encodeTopicField(tag: number, topic: Uint8Array): Uint8Array {
+	ensureFixedLength(topic, 32, "Statement Store topic");
+	return concatBytes([u8.enc(tag), topic]);
+}
+
+function encodePriorityField(priority: number): Uint8Array {
+	if (!Number.isInteger(priority) || priority < 0 || priority > 0xffff_ffff) {
+		throw new Error(
+			`Statement Store priority must fit in u32, got ${priority} (${typeof priority}).`,
+		);
+	}
+	const buf = new Uint8Array(4);
+	new DataView(buf.buffer).setUint32(0, priority, true);
+	return concatBytes([u8.enc(FIELD_PRIORITY), buf]);
+}
+
+/**
+ * Build the signature payload for a Statement Store statement — the canonical
+ * `Statement::encoded(true)` omits the authenticity proof but includes every
+ * other field in ascending discriminant order (Priority=2, Topic1..4=4..7,
+ * Data=8).
+ */
+function buildSignaturePayloadWithTopics(
+	topics: readonly Uint8Array[],
+	data: Uint8Array,
+	priority?: number,
+): Uint8Array {
+	const parts: Uint8Array[] = [];
+	if (priority !== undefined) parts.push(encodePriorityField(priority));
+	topics.slice(0, 4).forEach((topic, i) => {
+		parts.push(encodeTopicField(FIELD_TOPIC1 + i, topic));
+	});
+	parts.push(encodeDataField(data));
+	return concatBytes(parts);
 }
 
 function buildSignedStatement(
 	data: Uint8Array,
 	publicKey: Uint8Array,
 	signature: Uint8Array,
+	topics: readonly Uint8Array[] = [],
+	priority?: number,
 ): Uint8Array {
-	return concatBytes([
-		compact.enc(2),
-		encodeProofField(publicKey, signature),
-		encodeDataField(data),
-	]);
+	const bodyParts: Uint8Array[] = [encodeProofField(publicKey, signature)];
+	if (priority !== undefined) bodyParts.push(encodePriorityField(priority));
+	topics.slice(0, 4).forEach((topic, i) => {
+		bodyParts.push(encodeTopicField(FIELD_TOPIC1 + i, topic));
+	});
+	bodyParts.push(encodeDataField(data));
+	const numFields = bodyParts.length;
+	return concatBytes([compact.enc(numFields), ...bodyParts]);
 }
 
 function bytesToHex(bytes: Uint8Array): string {
@@ -123,13 +159,57 @@ export async function submitToStatementStore(
 	publicKey: Uint8Array,
 	sign: (message: Uint8Array) => Uint8Array | Promise<Uint8Array>,
 ): Promise<void> {
-	const signaturePayload = buildStatementSignaturePayload(fileBytes);
-	const signature = await sign(signaturePayload);
-	const encoded = buildSignedStatement(fileBytes, publicKey, signature);
+	await submitSignedStatement(wsUrl, {
+		data: fileBytes,
+		publicKey,
+		sign,
+	});
+}
+
+/**
+ * Submit an arbitrary signed statement with up-to-four topic tags.
+ *
+ * The caller provides the raw data payload, their sr25519 public key, and a
+ * `sign` callback that produces a raw 64-byte sr25519 signature over whatever
+ * bytes are handed to it (i.e. not wrapped with `<Bytes>…</Bytes>`). That is
+ * the shape Statement Store requires — browser wallet extensions cannot
+ * produce it directly, so callers typically use an ephemeral local keypair.
+ */
+export async function submitSignedStatement(
+	wsUrl: string,
+	args: {
+		data: Uint8Array;
+		publicKey: Uint8Array;
+		sign: (message: Uint8Array) => Uint8Array | Promise<Uint8Array>;
+		topics?: readonly Uint8Array[];
+		/**
+		 * Optional `u32` priority used by the node's statement eviction logic.
+		 * Higher priority = less likely to be evicted when the per-account
+		 * quota (default 16 statements) is full. Callers that churn many
+		 * statements from the same account (e.g. chat) should set this to a
+		 * monotonically increasing value so older submissions are evicted
+		 * first instead of being rejected with `StoreFull`.
+		 */
+		priority?: number;
+	},
+): Promise<{ hash: string }> {
+	const topics = args.topics ?? [];
+	if (topics.length > 4) {
+		throw new Error(`Statement Store supports at most 4 topics, got ${topics.length}.`);
+	}
+	const signaturePayload = buildSignaturePayloadWithTopics(topics, args.data, args.priority);
+	const signature = await args.sign(signaturePayload);
+	const encoded = buildSignedStatement(
+		args.data,
+		args.publicKey,
+		signature,
+		topics,
+		args.priority,
+	);
 
 	if (encoded.length > MAX_STATEMENT_STORE_ENCODED_SIZE) {
 		throw new Error(
-			`Statement is too large for node propagation (${encoded.length} encoded bytes, max ${MAX_STATEMENT_STORE_ENCODED_SIZE}). Choose a smaller file.`,
+			`Statement is too large for node propagation (${encoded.length} encoded bytes, max ${MAX_STATEMENT_STORE_ENCODED_SIZE}). Shorten the payload.`,
 		);
 	}
 
@@ -151,6 +231,8 @@ export async function submitToStatementStore(
 			`Statement Store error: ${result.error.message}${result.error.data ? ` (${JSON.stringify(result.error.data)})` : ""}`,
 		);
 	}
+	const hash = "0x" + bytesToHex(blake2b(encoded, undefined, 32));
+	return { hash };
 }
 
 export interface DecodedStatement {
@@ -282,6 +364,45 @@ export async function fetchStatements(wsUrl: string): Promise<DecodedStatement[]
 			id: 1,
 			method: "statement_dump",
 			params: [],
+		}),
+	});
+
+	const result = await response.json();
+	if (result.error) {
+		throw new Error(result.error.message);
+	}
+
+	const encoded: string[] = result.result ?? [];
+	return encoded.map((hex) => {
+		const bytes = hexToBytes(hex);
+		const hash = "0x" + bytesToHex(blake2b(bytes, undefined, 32));
+		const decoded = decodeStatement(bytes);
+		return { hash, ...decoded };
+	});
+}
+
+/**
+ * Fetch full statements (SCALE-encoded) matching all of the given topics
+ * via the `statement_broadcastsStatement` JSON-RPC method. The node-side
+ * filter requires every topic to match, so the result is naturally scoped
+ * to the `[CHAT_NS, ORDER_TOPIC]` pair used by the P2P chat feature.
+ */
+export async function fetchStatementsByTopics(
+	wsUrl: string,
+	topics: readonly Uint8Array[],
+): Promise<DecodedStatement[]> {
+	if (topics.length === 0 || topics.length > 4) {
+		throw new Error(`Statement Store requires 1..=4 topics, got ${topics.length}.`);
+	}
+	const httpUrl = wsToHttp(wsUrl);
+	const response = await fetch(httpUrl, {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({
+			jsonrpc: "2.0",
+			id: 1,
+			method: "statement_broadcastsStatement",
+			params: [topics.map((t) => `0x${bytesToHex(t)}`)],
 		}),
 	});
 
