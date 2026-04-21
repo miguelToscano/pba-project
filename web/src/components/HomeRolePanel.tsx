@@ -1,3 +1,4 @@
+import { Binary } from "polkadot-api";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAccount, usePapiSigner } from "@luno-kit/react";
@@ -16,8 +17,18 @@ import {
 	orderStatusDisplay,
 } from "../utils/orderCodec";
 import { formatDispatchError } from "../utils/format";
+import {
+	hashDeliveryPinBlake2_256,
+	loadDeliveryPin,
+	randomDeliveryPin4,
+	rememberDeliveryPin,
+} from "../utils/deliveryPin";
 import { signAndSubmitAwaitBestBlock } from "../utils/signAndSubmitBestBlock";
 import { applyTemplatePalletTxToQueryCache } from "../utils/templatePalletQueryCache";
+import {
+	parseOrderPlacedFromTxEvents,
+	toOrderId,
+} from "../utils/templatePalletTxEvents";
 
 type RoleTab = "customer" | "restaurant" | "rider";
 
@@ -343,16 +354,29 @@ function CustomerMyOrders() {
 							status?: unknown;
 						};
 						const { lines: lineDetails, total } = orderLinesWithPricing(o.lines, menu);
+						const orderIdBig = toOrderId(id);
+						const savedPin =
+							address && orderIdBig !== null
+								? loadDeliveryPin(wsUrl, address, orderIdBig)
+								: null;
 						return (
 							<li key={String(id)} className="px-3 py-2.5 space-y-2">
-								<div className="flex justify-between gap-2">
+								<div className="flex justify-between gap-2 items-start">
 									<span className="font-mono text-xs text-text-secondary">
 										#{String(id)}
 									</span>
-									<span className="text-xs text-text-tertiary">
+									<span className="inline-flex shrink-0 items-center rounded-md bg-gradient-to-r from-polka-400 to-polka-600 px-2 py-0.5 text-[0.6875rem] font-semibold leading-none text-white shadow-sm">
 										{orderStatusDisplay(o.status)}
 									</span>
 								</div>
+								{savedPin ? (
+									<p className="text-xs text-text-secondary">
+										Delivery PIN (give to rider at handoff):{" "}
+										<span className="font-mono text-text-primary tracking-widest">
+											{savedPin}
+										</span>
+									</p>
+								) : null}
 								<p className="text-xs text-text-secondary font-mono break-all">
 									{o.restaurant ? shortAddress(o.restaurant) : "—"}
 								</p>
@@ -629,26 +653,36 @@ function RestaurantMenuModal({
 				.filter((l) => l.quantity > 0);
 			if (lines.length === 0)
 				throw new Error("Select at least one item with quantity greater than zero.");
+			const pin = randomDeliveryPin4();
+			const hashedPin = hashDeliveryPinBlake2_256(pin);
 			const api = getClient(wsUrl).getTypedApi(stack_template);
 			const tx = api.tx.TemplatePallet.place_order({
 				restaurant: restaurantAddress,
 				lines,
+				hashed_pin: Binary.fromBytes(hashedPin),
 			});
 			const result = await signAndSubmitAwaitBestBlock(tx, walletSigner);
 			if (!result.ok) {
 				throw new Error(formatDispatchError(result.dispatchError));
 			}
-			return result;
+			return { result, pin };
 		},
 		onMutate: () => {
 			setPlaceMsg(null);
 		},
-		onSuccess: (result) => {
+		onSuccess: ({ result, pin }) => {
 			setPlaceMsg("Order placed.");
 			applyTemplatePalletTxToQueryCache(
 				{ queryClient, wsUrl, walletAddress: address ?? undefined },
 				result,
 			);
+			const placed = parseOrderPlacedFromTxEvents(result.events);
+			if (placed && address) {
+				rememberDeliveryPin(wsUrl, address, placed.orderId, pin);
+				void queryClient.invalidateQueries({
+					queryKey: ["customerMyOrders", address, wsUrl],
+				});
+			}
 		},
 		onError: (e) => {
 			setPlaceMsg(e instanceof Error ? e.message : String(e));
@@ -772,6 +806,13 @@ function RestaurantMenuModal({
 				</p>
 
 				<div className="mt-4 flex flex-col gap-2 border-t border-white/[0.08] pt-4">
+					{isCustomer === true && (
+						<p className="text-xs text-text-tertiary text-center">
+							A random 4-digit delivery PIN is created when you place the order; only the
+							hash is stored on-chain. Your PIN appears under My orders (saved in this
+							browser).
+						</p>
+					)}
 					{isCustomer !== true && (
 						<p className="text-xs text-text-tertiary text-center">
 							Register as a customer (role registration) to place an order.

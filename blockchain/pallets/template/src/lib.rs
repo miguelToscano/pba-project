@@ -65,7 +65,8 @@ pub mod pallet {
 		pub name: BoundedVec<u8, ConstU32<64>>,
 		/// Longer description (UTF-8 bytes, bounded for `MaxEncodedLen`).
 		pub description: BoundedVec<u8, ConstU32<256>>,
-		/// Item price in the smallest on-chain unit (plain `u128`; not tied to a specific token here).
+		/// Item price in the smallest on-chain unit (plain `u128`; not tied to a specific token
+		/// here).
 		pub price: u128,
 	}
 
@@ -166,6 +167,8 @@ pub mod pallet {
 		pub restaurant: T::AccountId,
 		pub lines: BoundedVec<OrderLine, MaxOrderLines>,
 		pub status: OrderStatus,
+		/// Blake2-256 hash of the delivery PIN (plaintext stays with the customer off-chain).
+		pub hashed_pin: H256,
 		/// Rider assigned to deliver the order (if claimed).
 		pub assigned_rider: Option<T::AccountId>,
 	}
@@ -261,21 +264,11 @@ pub mod pallet {
 			who: T::AccountId,
 		},
 		/// A customer placed an order.
-		OrderPlaced {
-			order_id: OrderId,
-			customer: T::AccountId,
-			restaurant: T::AccountId,
-		},
+		OrderPlaced { order_id: OrderId, customer: T::AccountId, restaurant: T::AccountId },
 		/// An order's status was updated by the restaurant.
-		OrderStatusChanged {
-			order_id: OrderId,
-			status: OrderStatus,
-		},
+		OrderStatusChanged { order_id: OrderId, status: OrderStatus },
 		/// A rider claimed an order for delivery.
-		OrderDeliveryClaimed {
-			order_id: OrderId,
-			rider: T::AccountId,
-		},
+		OrderDeliveryClaimed { order_id: OrderId, rider: T::AccountId },
 	}
 
 	/// Errors that can occur in this pallet.
@@ -397,7 +390,8 @@ pub mod pallet {
 
 		/// Place an order at `restaurant` with menu lines (indices into that restaurant's menu).
 		///
-		/// Caller must be a registered customer. Appends the new order id to both
+		/// Caller must be a registered customer. `hashed_pin` is typically `Blake2_256(utf8(pin))`
+		/// for a short delivery PIN chosen by the customer client. Appends the new order id to both
 		/// [`CustomerOrders`] and [`RestaurantOrders`].
 		#[pallet::call_index(5)]
 		#[pallet::weight(T::WeightInfo::place_order())]
@@ -405,6 +399,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			restaurant: T::AccountId,
 			lines: BoundedVec<OrderLine, MaxOrderLines>,
+			hashed_pin: H256,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			ensure!(Customers::<T>::contains_key(&who), Error::<T>::NotRegisteredCustomer);
@@ -424,6 +419,7 @@ pub mod pallet {
 				restaurant: restaurant.clone(),
 				lines,
 				status: OrderStatus::Created,
+				hashed_pin,
 				assigned_rider: None,
 			};
 			Orders::<T>::insert(order_id, order);
@@ -435,15 +431,12 @@ pub mod pallet {
 				ids.try_push(order_id).map_err(|_| Error::<T>::OrderQueueFull)
 			})?;
 
-			Self::deposit_event(Event::OrderPlaced {
-				order_id,
-				customer: who,
-				restaurant,
-			});
+			Self::deposit_event(Event::OrderPlaced { order_id, customer: who, restaurant });
 			Ok(())
 		}
 
-		/// Advance this order to the next status (restaurant operator only). [`OrderStatus::OnItsWay`] is terminal.
+		/// Advance this order to the next status (restaurant operator only).
+		/// [`OrderStatus::OnItsWay`] is terminal.
 		#[pallet::call_index(6)]
 		#[pallet::weight(T::WeightInfo::advance_order_status())]
 		pub fn advance_order_status(origin: OriginFor<T>, order_id: OrderId) -> DispatchResult {
@@ -453,7 +446,9 @@ pub mod pallet {
 			let next = match order.status {
 				OrderStatus::Created => OrderStatus::InProgress,
 				OrderStatus::InProgress => OrderStatus::ReadyForPickup,
-				OrderStatus::ReadyForPickup => return Err(Error::<T>::OrderAwaitingRiderPickup.into()),
+				OrderStatus::ReadyForPickup => {
+					return Err(Error::<T>::OrderAwaitingRiderPickup.into())
+				},
 				OrderStatus::OnItsWay => return Err(Error::<T>::OrderAlreadyCompleted.into()),
 			};
 			order.status = next;
@@ -470,7 +465,10 @@ pub mod pallet {
 			ensure!(Riders::<T>::contains_key(&who), Error::<T>::NotRegisteredRider);
 
 			let mut order = Orders::<T>::get(order_id).ok_or(Error::<T>::UnknownOrder)?;
-			ensure!(order.status == OrderStatus::ReadyForPickup, Error::<T>::OrderNotReadyForPickup);
+			ensure!(
+				order.status == OrderStatus::ReadyForPickup,
+				Error::<T>::OrderNotReadyForPickup
+			);
 			ensure!(order.assigned_rider.is_none(), Error::<T>::OrderAlreadyClaimedByRider);
 
 			order.assigned_rider = Some(who.clone());
@@ -489,11 +487,11 @@ pub mod pallet {
 			ensure!(Riders::<T>::contains_key(&who), Error::<T>::NotRegisteredRider);
 
 			let mut order = Orders::<T>::get(order_id).ok_or(Error::<T>::UnknownOrder)?;
-			ensure!(order.status == OrderStatus::ReadyForPickup, Error::<T>::OrderNotReadyForPickup);
 			ensure!(
-				order.assigned_rider.as_ref() == Some(&who),
-				Error::<T>::NotAssignedRider
+				order.status == OrderStatus::ReadyForPickup,
+				Error::<T>::OrderNotReadyForPickup
 			);
+			ensure!(order.assigned_rider.as_ref() == Some(&who), Error::<T>::NotAssignedRider);
 
 			order.status = OrderStatus::OnItsWay;
 			Orders::<T>::insert(order_id, order);

@@ -89,7 +89,7 @@ mod benchmarks {
 		}])
 		.unwrap();
 		#[extrinsic_call]
-		place_order(RawOrigin::Signed(customer.clone()), restaurant.clone(), lines);
+		place_order(RawOrigin::Signed(customer.clone()), restaurant.clone(), lines, H256::zero());
 
 		assert!(Orders::<T>::contains_key(0u64));
 	}
@@ -116,6 +116,7 @@ mod benchmarks {
 			RawOrigin::Signed(customer).into(),
 			restaurant.clone(),
 			lines,
+			H256::zero(),
 		));
 		#[extrinsic_call]
 		advance_order_status(RawOrigin::Signed(restaurant.clone()), 0u64);
@@ -147,15 +148,13 @@ mod benchmarks {
 			RawOrigin::Signed(customer).into(),
 			restaurant.clone(),
 			lines,
+			H256::zero(),
 		));
 		assert_ok!(Pallet::<T>::advance_order_status(
 			RawOrigin::Signed(restaurant.clone()).into(),
 			0u64,
 		));
-		assert_ok!(Pallet::<T>::advance_order_status(
-			RawOrigin::Signed(restaurant).into(),
-			0u64,
-		));
+		assert_ok!(Pallet::<T>::advance_order_status(RawOrigin::Signed(restaurant).into(), 0u64,));
 
 		#[extrinsic_call]
 		claim_order_delivery(RawOrigin::Signed(rider.clone()), 0u64);
@@ -187,15 +186,13 @@ mod benchmarks {
 			RawOrigin::Signed(customer).into(),
 			restaurant.clone(),
 			lines,
+			H256::zero(),
 		));
 		assert_ok!(Pallet::<T>::advance_order_status(
 			RawOrigin::Signed(restaurant.clone()).into(),
 			0u64,
 		));
-		assert_ok!(Pallet::<T>::advance_order_status(
-			RawOrigin::Signed(restaurant).into(),
-			0u64,
-		));
+		assert_ok!(Pallet::<T>::advance_order_status(RawOrigin::Signed(restaurant).into(), 0u64,));
 		assert_ok!(Pallet::<T>::claim_order_delivery(
 			RawOrigin::Signed(rider.clone()).into(),
 			0u64,

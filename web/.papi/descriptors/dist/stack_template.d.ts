@@ -1,5 +1,5 @@
 import { StorageDescriptor, PlainDescriptor, TxDescriptor, RuntimeDescriptor, Enum, ApisFromDef, QueryFromPalletsDef, TxFromPalletsDef, EventsFromPalletsDef, ErrorsFromPalletsDef, ConstFromPalletsDef, ViewFnsFromPalletsDef, SS58String, FixedSizeBinary, Binary, FixedSizeArray } from "polkadot-api";
-import { I5sesotjlssv2d, Iffmde3ekjedi9, I4mddgoa69c0a2, Iccb6e6k56qv34, I95g6i7ilua7lq, Ieniouoqkq4icf, Phase, Ibgl04rn6nbfm6, I4q39t5hn830vp, I1v7jbnil3tjns, I8jgj1nhcr2dg8, Ifn6q3equiq9qi, Ia3sb0vgvovhtg, Iav8k1edbj86k7, Itom7fk49o0c9, I4i91h98n3cv1b, I4iumukclgj8ej, Iqnbvitf7a7l3, I48i407regf59r, I6r5cbv8ttrb09, I1q8tnt1cluu5j, I8ds64oj6581v0, Ia7pdug7cdsg8g, I63lqt6dl3kn9k, I9bin2jc70qt6q, TransactionPaymentReleases, Ia2lhg7l2hilo3, Ifi4da1gej1fri, Ifvgo9568rpmqc, I82jm9g7pufuel, Ic5m5lp1oioo8r, I6cs1itejju2vv, Icgljjb6j82uhn, Ib77b0fp1a6mjr, I5g2vv0ckl2m8b, Ifup3lg9ro8a0f, I5qfubnuvrnqn6, I8t3u2dv73ahbd, I7vlvrrl2pnbgk, Ie0rpl5bahldfk, XcmPalletVersionMigrationStage, I7e5oaj2qi4kl1, Ie849h3gncgvok, Iat62vud7hlod2, Ict03eedr8de9s, Ici7ejds60vj52, XcmVersionedLocation, Idh2ug6ou4a8og, Iejeo53sea6n4q, I53esa2ms463bk, Ib4jhb8tt3uung, I7offqqltf3agj, I53bq5kpov3oqq, I5stjt0m6048lo, Iafqnechp3omqg, I834nfrf667ag1, I14i9pui8lc778, I8t4pajubp34g3, I10nrsmn0hji4l, I3oiqcurom3m43, I20ichc5j0l1u7, I1p16diuhde12h, Id4f5q01qh34o3, In7a38730s6qs, If15el53dd76v9, I9s0ave7t0vnrk, I4fo08joqmcqnm, XcmV5Junctions, Iasb8k6ash5mjn, I8ofcg5rbj0g2c, I4adgbll7gku4i, I6pjjpfvhvcfru, I9pj91mj79qekl, I39uah9nss64h9, Ik64dknsq7k08, Ib51vk42m1po4n, Ial23jn8hp0aen, Ifpj261e8s63m3, Idcr6u6361oad9, I4ktuaksf5i1gk, I9bqtpv2ii35mp, I9j7pagd6d4bda, I2h9pmio37r7fb, Ibmr18suc9ikh9, I9iq22t0burs89, I5u8olqbbvfnvf, I5utcetro501ir, I2r71t0bc6tiha, Ie7vfd088hmvar, I8k3rnvpeeh4hv, I3iqca4te1qti7, Ifccifqltb5obi, Iadtsfv699cq8b, Ialpmgmhr3gk5r, I4cbvqmqadhrea, I3sdol54kg5jaq, I8fougodaj6di6, I81vt5eq60l4b6, I3vh014cqgmrfd, Ia5cotcvi888ln, I21jsa919m88fd, Iegif7m3upfe1k, I9kt8c221c83ln, Ic76kfh5ebqkpl, Icscpmubum33bq, I21d2olof7eb60, Ibgm4rnf22lal1, Ie68np0vpihith, I9bnv6lu0crf1q, Iauhjqifrdklq7, Ie1uso9m8rt5cf, I40pqum1mu8qg3, I1r4c2ghbtvjuc, I1jm8m1rh9e20v, I38p7h72khcif2, I9tvmo81e35gv5, Ida37oe44osb06, I6v02o6j4snahe, I27569neuh5t1o, Id92o6smntb9m5, I5nmb2hfkgk9ol, Iav55bcqlrqn51, Ie402cv49r0mpt, I10ra4g1rl6k2f, I1uihehkdsggvp, Ia82mnkmeo2rhc, I4ktg8d5a9utvj, Icbccs0ug47ilf, I855j4i3kr8ko1, Ib0b51h6i0ujvh, Idd7hd99u0ho0n, Iafscmv8tjf0ou, I100l07kaehdlp, I6gnbnvip5vvdi, Icv68aq8841478, Ic262ibdoec56a, Iflcfm9b6nlmdd, Ijrsf4mnp3eka, Id5fm4p8lj5qgi, I8tjvj9uq4b7hi, I3qt1hgg4djhgb, I4fooe9dun9o0t, I2sjgp7v0b4kr7, Iq8n5b8q00vqa, Iaa6lo6ksjs4p7, Iph9c4rn81ub2, Ier2cke86dqbr2, Iekdm646p0k949, I5rtkmhm2dng4u, I39t01nnod9109, I6v8sm60vvkmk7, I1qmtmbe5so8r3, Ih99m6ehpcar7, Idgorhsbgdq2ap, I9ubb2kqevnu6t, I2hq50pu2kdjpo, I9acqruh7322g2, I137t1cld92pod, I61d51nv4cou88, If8u5kl4h8070m, Ibmuil6p3vl83l, I7lul91g50ae87, Icl7nl1rfeog3i, Iasr6pj6shs0fl, I2uqmls7kcdnii, Idg69klialbkb8, I7r6b7145022pp, I30pg328m00nr3, Icmrn7bogp28cs, I7m9b5plj4h5ot, I9onhk772nfs4f, I3l6bnksrmt56r, Idh09k0l2pmdcg, I7uoiphbm0tj4r, I512p1n7qt24l8, I6s1nbislhk619, I3gghqnh2mj0is, I6iv852roh6t3h, I9oc2o6itbiopq, Ibslgga81p36aa, I1rvj4ubaplho0, Ia3uu7lqcc1q1i, I7crucfnonitkn, I7tmrp94r9sq4n, I3uua81e9uvgnp, I9p6tgcfbrrlod, Ib7upqb1vcehac, I17gs13qpher3o, I7svbvm6hg57aj, I8jhsbaiultviu, I8gqtfd7ldhr5v, I5r8t4iaend96p, Iaqet9jc3ihboe, Ic952bubvq4k7d, I2v50gu3s1aqk6, Iabpgqcjikia83, I4gil44d08grh, I7u915mvkdsb08, I3dukf1po8rggt, If7uv525tdvv7a, I2an1fs2eiebjp, TransactionValidityTransactionSource, I9ask1o4tfvcvs, Icerf8h8pdu8ss, I6spmpef2c7svf, Iei2mvq0mjvt81, I9a6apnsv2eqoj, Ic1d4u2opv3fst, Ico18ks790i2bl, I815pbp5omtss, I3ju6ot8lfmk90, Ie9sr1iqcg3cgm, I1mqgk2tmnn9i2, I6lr8sctk0bi4e, I4totqt881mlti, I4s6vifaf8k998, I35p85j063s0il, I3ihqvff25lmne, I9sijb8gfrns29, I7q278sgdbndrh, I6f9v7emp7t5ba, Ida7d8eqrkav55, Idmrtv8jbbitnu, I6jn5nn1d3bbj5, I49me9vtj7tlng, I63nhnkgg114n5, I1l7ajs6s9ur3a, Ice9mpbhevl5b7, Idt5popft6i714, I512dtcl0pn07c, I9le0i1s70tk3v } from "./common-types";
+import { I5sesotjlssv2d, Iffmde3ekjedi9, I4mddgoa69c0a2, I3tek0ntb32027, I95g6i7ilua7lq, Ieniouoqkq4icf, Phase, Ibgl04rn6nbfm6, I4q39t5hn830vp, I1v7jbnil3tjns, I8jgj1nhcr2dg8, Ifn6q3equiq9qi, Ia3sb0vgvovhtg, Iav8k1edbj86k7, Itom7fk49o0c9, I4i91h98n3cv1b, I4iumukclgj8ej, Iqnbvitf7a7l3, I48i407regf59r, I6r5cbv8ttrb09, I1q8tnt1cluu5j, I8ds64oj6581v0, Ia7pdug7cdsg8g, I63lqt6dl3kn9k, I9bin2jc70qt6q, TransactionPaymentReleases, Ia2lhg7l2hilo3, Ifi4da1gej1fri, Ifvgo9568rpmqc, I82jm9g7pufuel, Ic5m5lp1oioo8r, I6cs1itejju2vv, Icgljjb6j82uhn, Ib77b0fp1a6mjr, I5g2vv0ckl2m8b, Ifup3lg9ro8a0f, I5qfubnuvrnqn6, I8t3u2dv73ahbd, I7vlvrrl2pnbgk, Ie0rpl5bahldfk, XcmPalletVersionMigrationStage, I7e5oaj2qi4kl1, Ie849h3gncgvok, Iat62vud7hlod2, Ict03eedr8de9s, Ici7ejds60vj52, XcmVersionedLocation, Idh2ug6ou4a8og, Iejeo53sea6n4q, I53esa2ms463bk, Ib4jhb8tt3uung, I7offqqltf3agj, I53bq5kpov3oqq, I47mucjd226m6s, Iafqnechp3omqg, I834nfrf667ag1, I14i9pui8lc778, I8t4pajubp34g3, I10nrsmn0hji4l, I3oiqcurom3m43, I20ichc5j0l1u7, I1p16diuhde12h, Id4f5q01qh34o3, In7a38730s6qs, If15el53dd76v9, I9s0ave7t0vnrk, I4fo08joqmcqnm, XcmV5Junctions, Iasb8k6ash5mjn, I8ofcg5rbj0g2c, I4adgbll7gku4i, I6pjjpfvhvcfru, I9pj91mj79qekl, I39uah9nss64h9, Ik64dknsq7k08, Ib51vk42m1po4n, Ial23jn8hp0aen, Ifpj261e8s63m3, Idcr6u6361oad9, I4ktuaksf5i1gk, I9bqtpv2ii35mp, I9j7pagd6d4bda, I2h9pmio37r7fb, Ibmr18suc9ikh9, I9iq22t0burs89, I5u8olqbbvfnvf, I5utcetro501ir, I6dpq2pvng2b6s, Ief05f3uiqms9m, I8k3rnvpeeh4hv, Idlhvl0usoodmh, Ifccifqltb5obi, Iadtsfv699cq8b, Ialpmgmhr3gk5r, I4cbvqmqadhrea, I3sdol54kg5jaq, I8fougodaj6di6, I81vt5eq60l4b6, I3vh014cqgmrfd, Ia5cotcvi888ln, I21jsa919m88fd, Iegif7m3upfe1k, I9kt8c221c83ln, Ic76kfh5ebqkpl, Icscpmubum33bq, I21d2olof7eb60, Ibgm4rnf22lal1, Ie68np0vpihith, I9bnv6lu0crf1q, Iauhjqifrdklq7, Ie1uso9m8rt5cf, I40pqum1mu8qg3, I1r4c2ghbtvjuc, I1jm8m1rh9e20v, I1h6gpnnd2oh8k, I9tvmo81e35gv5, Ida37oe44osb06, I6v02o6j4snahe, I27569neuh5t1o, Id92o6smntb9m5, I5nmb2hfkgk9ol, Iav55bcqlrqn51, I311hlseuudv3u, I10ra4g1rl6k2f, I1uihehkdsggvp, Ia82mnkmeo2rhc, I568v4pn9u6o41, Icbccs0ug47ilf, I855j4i3kr8ko1, I952lqlp7m0p8n, Idd7hd99u0ho0n, Iafscmv8tjf0ou, I100l07kaehdlp, I6gnbnvip5vvdi, Icv68aq8841478, Ic262ibdoec56a, Iflcfm9b6nlmdd, Ijrsf4mnp3eka, Id5fm4p8lj5qgi, I8tjvj9uq4b7hi, I3qt1hgg4djhgb, I4fooe9dun9o0t, I2sjgp7v0b4kr7, Iq8n5b8q00vqa, Iaa6lo6ksjs4p7, Iph9c4rn81ub2, Ier2cke86dqbr2, I5lk47imangq7h, I5rtkmhm2dng4u, I39t01nnod9109, I6v8sm60vvkmk7, I1qmtmbe5so8r3, Ih99m6ehpcar7, Idgorhsbgdq2ap, I9ubb2kqevnu6t, I2hq50pu2kdjpo, I9acqruh7322g2, I137t1cld92pod, I61d51nv4cou88, If8u5kl4h8070m, Ibmuil6p3vl83l, I7lul91g50ae87, Icl7nl1rfeog3i, Iasr6pj6shs0fl, I2uqmls7kcdnii, Idg69klialbkb8, I7r6b7145022pp, I30pg328m00nr3, Icmrn7bogp28cs, I7m9b5plj4h5ot, I9onhk772nfs4f, I3l6bnksrmt56r, Idh09k0l2pmdcg, I7uoiphbm0tj4r, I512p1n7qt24l8, I6s1nbislhk619, I3gghqnh2mj0is, I6iv852roh6t3h, I9oc2o6itbiopq, Ibslgga81p36aa, I1rvj4ubaplho0, Ia3uu7lqcc1q1i, I7crucfnonitkn, I7tmrp94r9sq4n, I3uua81e9uvgnp, I9p6tgcfbrrlod, Ib7upqb1vcehac, I17gs13qpher3o, I93eh5cas76dhf, I7svbvm6hg57aj, I8jhsbaiultviu, I6vhfplkth4gj8, I5r8t4iaend96p, Iaqet9jc3ihboe, Ic952bubvq4k7d, I2v50gu3s1aqk6, Iabpgqcjikia83, I4gil44d08grh, I7u915mvkdsb08, Iaoud5dkjglf1o, If7uv525tdvv7a, I2an1fs2eiebjp, TransactionValidityTransactionSource, I9ask1o4tfvcvs, Icerf8h8pdu8ss, I6spmpef2c7svf, Iei2mvq0mjvt81, I18q9jrs7i1i98, Ic1d4u2opv3fst, Ico18ks790i2bl, I815pbp5omtss, I3ju6ot8lfmk90, Ie9sr1iqcg3cgm, I1mqgk2tmnn9i2, I6lr8sctk0bi4e, I4totqt881mlti, I4s6vifaf8k998, I35p85j063s0il, Ic3h12cla704h5, I9sijb8gfrns29, I13fasohu4o2r4, I6f9v7emp7t5ba, Ida7d8eqrkav55, Idmrtv8jbbitnu, I736dl5mpbmcgg, I889i1qlq7os1k, I63nhnkgg114n5, I1l7ajs6s9ur3a, Ice9mpbhevl5b7, Idt5popft6i714, I512dtcl0pn07c, Ibfav66n7ec1cs } from "./common-types";
 type AnonymousEnum<T extends {}> = T & {
     __anonymous: true;
 };
@@ -61,7 +61,7 @@ type IStorage = {
          * Events have a large in-memory size. Box the events to not go out-of-memory
          * just in case someone still reads them from within the runtime.
          */
-        Events: StorageDescriptor<[], Anonymize<Iccb6e6k56qv34>, false, never>;
+        Events: StorageDescriptor<[], Anonymize<I3tek0ntb32027>, false, never>;
         /**
          * The number of events in the `Events<T>` list.
          */
@@ -660,7 +660,7 @@ type IStorage = {
         /**
          * All orders by id.
          */
-        Orders: StorageDescriptor<[Key: bigint], Anonymize<I5stjt0m6048lo>, true, never>;
+        Orders: StorageDescriptor<[Key: bigint], Anonymize<I47mucjd226m6s>, true, never>;
         /**
          * Order ids for a customer (newest appended; bounded).
          */
@@ -958,7 +958,7 @@ type ICalls = {
         /**
          * Authenticates the sudo key and dispatches a function call with `Root` origin.
          */
-        sudo: TxDescriptor<Anonymize<I2r71t0bc6tiha>>;
+        sudo: TxDescriptor<Anonymize<I6dpq2pvng2b6s>>;
         /**
          * Authenticates the sudo key and dispatches a function call with `Root` origin.
          * This function does not check the weight of the call, and instead allows the
@@ -966,7 +966,7 @@ type ICalls = {
          *
          * The dispatch origin for this call must be _Signed_.
          */
-        sudo_unchecked_weight: TxDescriptor<Anonymize<Ie7vfd088hmvar>>;
+        sudo_unchecked_weight: TxDescriptor<Anonymize<Ief05f3uiqms9m>>;
         /**
          * Authenticates the current sudo key and sets the given AccountId (`new`) as the new sudo
          * key.
@@ -978,7 +978,7 @@ type ICalls = {
          *
          * The dispatch origin for this call must be _Signed_.
          */
-        sudo_as: TxDescriptor<Anonymize<I3iqca4te1qti7>>;
+        sudo_as: TxDescriptor<Anonymize<Idlhvl0usoodmh>>;
         /**
          * Permanently removes the sudo key.
          *
@@ -1476,14 +1476,26 @@ type ICalls = {
         /**
          * Place an order at `restaurant` with menu lines (indices into that restaurant's menu).
          *
-         * Caller must be a registered customer. Appends the new order id to both
+         * Caller must be a registered customer. `hashed_pin` is typically `Blake2_256(utf8(pin))`
+         * for a short delivery PIN chosen by the customer client. Appends the new order id to both
          * [`CustomerOrders`] and [`RestaurantOrders`].
          */
-        place_order: TxDescriptor<Anonymize<I38p7h72khcif2>>;
+        place_order: TxDescriptor<Anonymize<I1h6gpnnd2oh8k>>;
         /**
-         * Advance this order to the next status (restaurant operator only). [`OrderStatus::OnItsWay`] is terminal.
+         * Advance this order to the next status (restaurant operator only).
+         * [`OrderStatus::OnItsWay`] is terminal.
          */
         advance_order_status: TxDescriptor<Anonymize<I9tvmo81e35gv5>>;
+        /**
+         * Claim an order for delivery as a rider. Only `ReadyForPickup` orders may be claimed.
+         */
+        claim_order_delivery: TxDescriptor<Anonymize<I9tvmo81e35gv5>>;
+        /**
+         * Confirm pickup and start delivery as the assigned rider.
+         *
+         * Moves the order to the terminal `OnItsWay` status.
+         */
+        confirm_delivery_pickup: TxDescriptor<Anonymize<I9tvmo81e35gv5>>;
     };
     Revive: {
         /**
@@ -1613,7 +1625,7 @@ type ICalls = {
          * * `call`: The Substrate runtime call to execute.
          * * `transaction_encoded`: The RLP encoding of the Ethereum transaction,
          */
-        eth_substrate_call: TxDescriptor<Anonymize<Ie402cv49r0mpt>>;
+        eth_substrate_call: TxDescriptor<Anonymize<I311hlseuudv3u>>;
         /**
          * Upload new `code` without instantiating a contract from it.
          *
@@ -1672,7 +1684,7 @@ type ICalls = {
          * is the `AccountId20` with the last 12 bytes set to `0xEE`. This is essentially a
          * recovery function in case an `AccountId20` was used without creating a mapping first.
          */
-        dispatch_as_fallback_account: TxDescriptor<Anonymize<I2r71t0bc6tiha>>;
+        dispatch_as_fallback_account: TxDescriptor<Anonymize<I6dpq2pvng2b6s>>;
     };
 };
 type IEvent = {
@@ -1684,7 +1696,7 @@ type IEvent = {
         /**
          * An extrinsic failed.
          */
-        ExtrinsicFailed: PlainDescriptor<Anonymize<I4ktg8d5a9utvj>>;
+        ExtrinsicFailed: PlainDescriptor<Anonymize<I568v4pn9u6o41>>;
         /**
          * `:code` was updated.
          */
@@ -1708,7 +1720,7 @@ type IEvent = {
         /**
          * An invalid authorized upgrade was rejected while trying to apply it.
          */
-        RejectedInvalidAuthorizedUpgrade: PlainDescriptor<Anonymize<Ib0b51h6i0ujvh>>;
+        RejectedInvalidAuthorizedUpgrade: PlainDescriptor<Anonymize<I952lqlp7m0p8n>>;
     };
     ParachainSystem: {
         /**
@@ -1871,7 +1883,7 @@ type IEvent = {
         /**
          * A sudo call just took place.
          */
-        Sudid: PlainDescriptor<Anonymize<Iekdm646p0k949>>;
+        Sudid: PlainDescriptor<Anonymize<I5lk47imangq7h>>;
         /**
          * The sudo key has been updated.
          */
@@ -1883,7 +1895,7 @@ type IEvent = {
         /**
          * A [sudo_as](Pallet::sudo_as) call just took place.
          */
-        SudoAsDone: PlainDescriptor<Anonymize<Iekdm646p0k949>>;
+        SudoAsDone: PlainDescriptor<Anonymize<I5lk47imangq7h>>;
     };
     CollatorSelection: {
         /**
@@ -2175,6 +2187,10 @@ type IEvent = {
          * An order's status was updated by the restaurant.
          */
         OrderStatusChanged: PlainDescriptor<Anonymize<I17gs13qpher3o>>;
+        /**
+         * A rider claimed an order for delivery.
+         */
+        OrderDeliveryClaimed: PlainDescriptor<Anonymize<I93eh5cas76dhf>>;
     };
     Revive: {
         /**
@@ -2193,7 +2209,7 @@ type IEvent = {
          * To distinguish reverted calls from successful ones, this event is emitted
          * for failed Ethereum transactions.
          */
-        EthExtrinsicRevert: PlainDescriptor<Anonymize<I8gqtfd7ldhr5v>>;
+        EthExtrinsicRevert: PlainDescriptor<Anonymize<I6vhfplkth4gj8>>;
     };
 };
 type IError = {
@@ -2632,6 +2648,10 @@ type IError = {
          */
         NotRegisteredCustomer: PlainDescriptor<undefined>;
         /**
+         * Caller must be registered as a rider to claim or start a delivery.
+         */
+        NotRegisteredRider: PlainDescriptor<undefined>;
+        /**
          * Target account has no restaurant record.
          */
         UnknownRestaurant: PlainDescriptor<undefined>;
@@ -2659,6 +2679,22 @@ type IError = {
          * Order is already in the terminal status.
          */
         OrderAlreadyCompleted: PlainDescriptor<undefined>;
+        /**
+         * This order is not in `ReadyForPickup`, so it cannot be claimed or started.
+         */
+        OrderNotReadyForPickup: PlainDescriptor<undefined>;
+        /**
+         * This order has already been claimed by a rider.
+         */
+        OrderAlreadyClaimedByRider: PlainDescriptor<undefined>;
+        /**
+         * Caller is not the rider assigned to this order.
+         */
+        NotAssignedRider: PlainDescriptor<undefined>;
+        /**
+         * Restaurant cannot advance an order past `ReadyForPickup`.
+         */
+        OrderAwaitingRiderPickup: PlainDescriptor<undefined>;
         /**
          * Customer or restaurant order list is full.
          */
@@ -3384,7 +3420,7 @@ type IRuntimeCalls = {
          * Returns an inclusion outcome which specifies if this extrinsic is included in
          * this block or not.
          */
-        apply_extrinsic: RuntimeDescriptor<[extrinsic: Binary], Anonymize<I3dukf1po8rggt>>;
+        apply_extrinsic: RuntimeDescriptor<[extrinsic: Binary], Anonymize<Iaoud5dkjglf1o>>;
         /**
          * Finish the current block.
          */
@@ -3482,11 +3518,11 @@ type IRuntimeCalls = {
         /**
          * Query information of a dispatch class, weight, and fee of a given encoded `Call`.
          */
-        query_call_info: RuntimeDescriptor<[call: Anonymize<I9a6apnsv2eqoj>, len: number], Anonymize<I6spmpef2c7svf>>;
+        query_call_info: RuntimeDescriptor<[call: Anonymize<I18q9jrs7i1i98>, len: number], Anonymize<I6spmpef2c7svf>>;
         /**
          * Query fee details of a given encoded `Call`.
          */
-        query_call_fee_details: RuntimeDescriptor<[call: Anonymize<I9a6apnsv2eqoj>, len: number], Anonymize<Iei2mvq0mjvt81>>;
+        query_call_fee_details: RuntimeDescriptor<[call: Anonymize<I18q9jrs7i1i98>, len: number], Anonymize<Iei2mvq0mjvt81>>;
         /**
          * Query the output of the current `WeightToFee` given some input.
          */
@@ -3606,13 +3642,13 @@ type IRuntimeCalls = {
          *
          * See [`crate::Pallet::bare_call`].
          */
-        call: RuntimeDescriptor<[origin: SS58String, dest: FixedSizeBinary<20>, value: bigint, gas_limit: Anonymize<Iasb8k6ash5mjn>, storage_deposit_limit: Anonymize<I35p85j063s0il>, input_data: Binary], Anonymize<I3ihqvff25lmne>>;
+        call: RuntimeDescriptor<[origin: SS58String, dest: FixedSizeBinary<20>, value: bigint, gas_limit: Anonymize<Iasb8k6ash5mjn>, storage_deposit_limit: Anonymize<I35p85j063s0il>, input_data: Binary], Anonymize<Ic3h12cla704h5>>;
         /**
          * Instantiate a new contract.
          *
          * See `[crate::Pallet::bare_instantiate]`.
          */
-        instantiate: RuntimeDescriptor<[origin: SS58String, value: bigint, gas_limit: Anonymize<Iasb8k6ash5mjn>, storage_deposit_limit: Anonymize<I35p85j063s0il>, code: Anonymize<I9sijb8gfrns29>, data: Binary, salt: Anonymize<I4s6vifaf8k998>], Anonymize<I7q278sgdbndrh>>;
+        instantiate: RuntimeDescriptor<[origin: SS58String, value: bigint, gas_limit: Anonymize<Iasb8k6ash5mjn>, storage_deposit_limit: Anonymize<I35p85j063s0il>, code: Anonymize<I9sijb8gfrns29>, data: Binary, salt: Anonymize<I4s6vifaf8k998>], Anonymize<I13fasohu4o2r4>>;
         /**
          * Perform an Ethereum call.
          *
@@ -3631,7 +3667,7 @@ type IRuntimeCalls = {
          *
          * See [`crate::Pallet::bare_upload_code`].
          */
-        upload_code: RuntimeDescriptor<[origin: SS58String, code: Binary, storage_deposit_limit: Anonymize<I35p85j063s0il>], Anonymize<I6jn5nn1d3bbj5>>;
+        upload_code: RuntimeDescriptor<[origin: SS58String, code: Binary, storage_deposit_limit: Anonymize<I35p85j063s0il>], Anonymize<I736dl5mpbmcgg>>;
         /**
          * Query a given storage key in a given contract.
          *
@@ -3639,7 +3675,7 @@ type IRuntimeCalls = {
          * specified account and `Ok(None)` if it doesn't. If the account specified by the address
          * doesn't exist, or doesn't have a contract then `Err` is returned.
          */
-        get_storage: RuntimeDescriptor<[address: FixedSizeBinary<20>, key: FixedSizeBinary<32>], Anonymize<I49me9vtj7tlng>>;
+        get_storage: RuntimeDescriptor<[address: FixedSizeBinary<20>, key: FixedSizeBinary<32>], Anonymize<I889i1qlq7os1k>>;
         /**
          * Query a given variable-sized storage key in a given contract.
          *
@@ -3647,7 +3683,7 @@ type IRuntimeCalls = {
          * specified account and `Ok(None)` if it doesn't. If the account specified by the address
          * doesn't exist, or doesn't have a contract then `Err` is returned.
          */
-        get_storage_var_key: RuntimeDescriptor<[address: FixedSizeBinary<20>, key: Binary], Anonymize<I49me9vtj7tlng>>;
+        get_storage_var_key: RuntimeDescriptor<[address: FixedSizeBinary<20>, key: Binary], Anonymize<I889i1qlq7os1k>>;
         /**
          * Traces the execution of an entire block and returns call traces.
          *
@@ -3698,7 +3734,7 @@ type IRuntimeCalls = {
         new_balance_with_dust: RuntimeDescriptor<[balance: Anonymize<I4totqt881mlti>], Anonymize<I512dtcl0pn07c>>;
     };
 };
-export type Stack_templateDispatchError = Anonymize<I9le0i1s70tk3v>;
+export type Stack_templateDispatchError = Anonymize<Ibfav66n7ec1cs>;
 type IAsset = PlainDescriptor<void>;
 export type Stack_templateExtensions = {};
 type PalletsTypedef = {
@@ -3729,7 +3765,7 @@ export type Stack_templateEvents = EventsFromPalletsDef<PalletsTypedef>;
 export type Stack_templateErrors = ErrorsFromPalletsDef<PalletsTypedef>;
 export type Stack_templateConstants = ConstFromPalletsDef<PalletsTypedef>;
 export type Stack_templateViewFns = ViewFnsFromPalletsDef<PalletsTypedef>;
-export type Stack_templateCallData = Anonymize<I9a6apnsv2eqoj> & {
+export type Stack_templateCallData = Anonymize<I18q9jrs7i1i98> & {
     value: {
         type: string;
     };
@@ -3765,7 +3801,7 @@ type AllInteractions = {
         XcmpQueue: ['suspend_xcm_execution', 'resume_xcm_execution', 'update_suspend_threshold', 'update_drop_threshold', 'update_resume_threshold'];
         PolkadotXcm: ['send', 'teleport_assets', 'reserve_transfer_assets', 'execute', 'force_xcm_version', 'force_default_xcm_version', 'force_subscribe_version_notify', 'force_unsubscribe_version_notify', 'limited_reserve_transfer_assets', 'limited_teleport_assets', 'force_suspension', 'transfer_assets', 'claim_assets', 'transfer_assets_using_type_and_then', 'add_authorized_alias', 'remove_authorized_alias', 'remove_all_authorized_aliases'];
         MessageQueue: ['reap_page', 'execute_overweight'];
-        TemplatePallet: ['create_claim', 'revoke_claim', 'create_customer', 'create_restaurant', 'create_rider', 'place_order', 'advance_order_status'];
+        TemplatePallet: ['create_claim', 'revoke_claim', 'create_customer', 'create_restaurant', 'create_rider', 'place_order', 'advance_order_status', 'claim_order_delivery', 'confirm_delivery_pickup'];
         Revive: ['eth_transact', 'call', 'instantiate', 'instantiate_with_code', 'eth_instantiate_with_code', 'eth_call', 'eth_substrate_call', 'upload_code', 'remove_code', 'set_code', 'map_account', 'unmap_account', 'dispatch_as_fallback_account'];
     };
     events: {
@@ -3781,7 +3817,7 @@ type AllInteractions = {
         CumulusXcm: ['InvalidFormat', 'UnsupportedVersion', 'ExecutedDownward'];
         MessageQueue: ['ProcessingFailed', 'Processed', 'OverweightEnqueued', 'PageReaped'];
         Statement: ['NewStatement'];
-        TemplatePallet: ['ClaimCreated', 'ClaimRevoked', 'CustomerCreated', 'RestaurantCreated', 'RiderCreated', 'OrderPlaced', 'OrderStatusChanged'];
+        TemplatePallet: ['ClaimCreated', 'ClaimRevoked', 'CustomerCreated', 'RestaurantCreated', 'RiderCreated', 'OrderPlaced', 'OrderStatusChanged', 'OrderDeliveryClaimed'];
         Revive: ['ContractEmitted', 'Instantiated', 'EthExtrinsicRevert'];
     };
     errors: {
@@ -3794,7 +3830,7 @@ type AllInteractions = {
         XcmpQueue: ['BadQueueConfig', 'AlreadySuspended', 'AlreadyResumed', 'TooManyActiveOutboundChannels', 'TooBig'];
         PolkadotXcm: ['Unreachable', 'SendFailure', 'Filtered', 'UnweighableMessage', 'DestinationNotInvertible', 'Empty', 'CannotReanchor', 'TooManyAssets', 'InvalidOrigin', 'BadVersion', 'BadLocation', 'NoSubscription', 'AlreadySubscribed', 'CannotCheckOutTeleport', 'LowBalance', 'TooManyLocks', 'AccountNotSovereign', 'FeesNotMet', 'LockNotFound', 'InUse', 'InvalidAssetUnknownReserve', 'InvalidAssetUnsupportedReserve', 'TooManyReserves', 'LocalExecutionIncomplete', 'TooManyAuthorizedAliases', 'ExpiresInPast', 'AliasNotFound', 'LocalExecutionIncompleteWithError'];
         MessageQueue: ['NotReapable', 'NoPage', 'NoMessage', 'AlreadyProcessed', 'Queued', 'InsufficientWeight', 'TemporarilyUnprocessable', 'QueuePaused', 'RecursiveDisallowed'];
-        TemplatePallet: ['AlreadyClaimed', 'NotClaimOwner', 'ClaimNotFound', 'AlreadyCustomer', 'AlreadyRestaurant', 'AlreadyRider', 'RestaurantNameEmpty', 'NotRegisteredCustomer', 'UnknownRestaurant', 'InvalidMenuIndex', 'InvalidQuantity', 'EmptyOrder', 'UnknownOrder', 'NotOrderRestaurant', 'OrderAlreadyCompleted', 'OrderQueueFull'];
+        TemplatePallet: ['AlreadyClaimed', 'NotClaimOwner', 'ClaimNotFound', 'AlreadyCustomer', 'AlreadyRestaurant', 'AlreadyRider', 'RestaurantNameEmpty', 'NotRegisteredCustomer', 'NotRegisteredRider', 'UnknownRestaurant', 'InvalidMenuIndex', 'InvalidQuantity', 'EmptyOrder', 'UnknownOrder', 'NotOrderRestaurant', 'OrderAlreadyCompleted', 'OrderNotReadyForPickup', 'OrderAlreadyClaimedByRider', 'NotAssignedRider', 'OrderAwaitingRiderPickup', 'OrderQueueFull'];
         Revive: ['InvalidSchedule', 'InvalidCallFlags', 'OutOfGas', 'TransferFailed', 'MaxCallDepthReached', 'ContractNotFound', 'CodeNotFound', 'CodeInfoNotFound', 'OutOfBounds', 'DecodingFailed', 'ContractTrapped', 'ValueTooLarge', 'TerminatedWhileReentrant', 'InputForwarded', 'TooManyTopics', 'DuplicateContract', 'TerminatedInConstructor', 'ReentranceDenied', 'ReenteredPallet', 'StateChangeDenied', 'StorageDepositNotEnoughFunds', 'StorageDepositLimitExhausted', 'CodeInUse', 'ContractReverted', 'CodeRejected', 'BlobTooLarge', 'StaticMemoryTooLarge', 'BasicBlockTooLarge', 'InvalidInstruction', 'MaxDelegateDependenciesReached', 'DelegateDependencyNotFound', 'DelegateDependencyAlreadyExists', 'CannotAddSelfAsDelegateDependency', 'OutOfTransientStorage', 'InvalidSyscall', 'InvalidStorageFlags', 'ExecutionFailed', 'BalanceConversionFailed', 'InvalidImmutableAccess', 'AccountUnmapped', 'AccountAlreadyMapped', 'InvalidGenericTransaction', 'RefcountOverOrUnderflow', 'UnsupportedPrecompileAddress', 'CallDataTooLarge', 'ReturnDataTooLarge', 'InvalidJump', 'StackUnderflow', 'StackOverflow', 'TxFeeOverdraw', 'EvmConstructorNonEmptyData', 'EvmConstructedFromHash', 'StorageRefundNotEnoughFunds', 'StorageRefundLocked', 'PrecompileDelegateDenied', 'EcdsaRecoveryFailed'];
     };
     constants: {
