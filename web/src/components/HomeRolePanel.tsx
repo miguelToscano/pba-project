@@ -18,6 +18,7 @@ import {
 	orderLinesWithPricing,
 	orderStatusDisplay,
 	orderStatusVariant,
+	restaurantTerminalActionLabel,
 } from "../utils/orderCodec";
 import { formatBalance, formatDispatchError, TOKEN_SYMBOL } from "../utils/format";
 import { useAccountBalance } from "../hooks/useAccountBalance";
@@ -205,6 +206,36 @@ function RiderReadyPickupOrders({ isRider }: { isRider: boolean | null }) {
 		},
 	});
 
+	// Rider marking a claimed order as picked up: drives the pallet's
+	// `confirm_delivery_pickup`, which moves `ReadyForPickup → OnItsWay`.
+	// After the event-driven cache patch runs, the row leaves this list
+	// and the restaurant/customer views flip to "On its way" without a
+	// storage round-trip.
+	const markOnItsWayMut = useMutation({
+		mutationFn: async (orderId: bigint) => {
+			if (!walletSigner) throw new Error("Connect a wallet and approve signing.");
+			const api = getClient(wsUrl).getTypedApi(stack_template);
+			const tx = api.tx.TemplatePallet.confirm_delivery_pickup({ order_id: orderId });
+			const result = await signAndSubmitAwaitBestBlock(tx, walletSigner);
+			if (!result.ok) {
+				throw new Error(formatDispatchError(result.dispatchError));
+			}
+			return result;
+		},
+		onMutate: () => {
+			setClaimMsg(null);
+		},
+		onSuccess: (result) => {
+			applyTemplatePalletTxToQueryCache(
+				{ queryClient, wsUrl, walletAddress: address ?? undefined },
+				result,
+			);
+		},
+		onError: (e) => {
+			setClaimMsg(e instanceof Error ? e.message : String(e));
+		},
+	});
+
 	const canAttemptClaim =
 		connected &&
 		templatePallet === true &&
@@ -279,13 +310,31 @@ function RiderReadyPickupOrders({ isRider }: { isRider: boolean | null }) {
 									<td className="py-3 px-3 whitespace-nowrap">
 										{row.assignedRider ? (
 											sameAccount(row.assignedRider, address) ? (
-												<button
-													type="button"
-													onClick={() => openChat(row.id)}
-													className="btn-secondary text-xs px-2.5 py-1"
-												>
-													Chat
-												</button>
+												<div className="flex flex-wrap items-center gap-1.5">
+													<button
+														type="button"
+														disabled={
+															markOnItsWayMut.isPending &&
+															markOnItsWayMut.variables === row.id
+														}
+														onClick={() =>
+															void markOnItsWayMut.mutateAsync(row.id)
+														}
+														className="btn-primary text-xs px-2.5 py-1 disabled:opacity-40 disabled:cursor-not-allowed"
+													>
+														{markOnItsWayMut.isPending &&
+														markOnItsWayMut.variables === row.id
+															? "Signing…"
+															: "Mark on its way"}
+													</button>
+													<button
+														type="button"
+														onClick={() => openChat(row.id)}
+														className="btn-secondary text-xs px-2.5 py-1"
+													>
+														Chat
+													</button>
+												</div>
 											) : (
 												<span className="text-xs text-text-tertiary">
 													Claimed
@@ -831,6 +880,7 @@ function RestaurantOrdersPanel() {
 									status?: unknown;
 								};
 								const nextLabel = nextAdvanceActionLabel(o.status);
+								const terminalLabel = restaurantTerminalActionLabel(o.status);
 								const busyThis =
 									advanceMut.isPending && advanceMut.variables === id;
 								return (
@@ -858,13 +908,13 @@ function RestaurantOrdersPanel() {
 													type="button"
 													disabled={!canAdvance || busyThis}
 													onClick={() => advanceMut.mutate(id)}
-													className="btn-secondary text-xs whitespace-nowrap disabled:opacity-40"
+													className="btn-primary text-xs whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed"
 												>
 													{busyThis ? "Signing…" : nextLabel}
 												</button>
 											) : (
-												<span className="text-xs text-text-tertiary">
-													Complete
+												<span className="text-xs text-text-tertiary whitespace-nowrap">
+													{terminalLabel ?? "—"}
 												</span>
 											)}
 										</td>

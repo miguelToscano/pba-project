@@ -168,3 +168,19 @@ export function patchAssignedRiderInRiderReadyOrders(
 	});
 	return touched ? next : prev;
 }
+
+/**
+ * Drop one order from the rider's "Available Orders" cache. Used when the
+ * signer's tx emits `OrderStatusChanged` with a status other than
+ * `ReadyForPickup` (currently only `confirm_delivery_pickup`, which moves
+ * the order to `OnItsWay`), so the row leaves the list without waiting
+ * for a storage refetch.
+ */
+export function removeOrderFromRiderReadyOrders(
+	prev: RiderReadyOrderRow[] | undefined,
+	orderId: bigint,
+): RiderReadyOrderRow[] | undefined {
+	if (!prev?.length) return prev;
+	const next = prev.filter((row) => row.id !== orderId);
+	return next.length === prev.length ? prev : next;
+}

@@ -8,9 +8,11 @@ import {
 	patchAssignedRiderInRiderReadyOrders,
 	patchOrderAssignedRiderInOrdersLists,
 	patchOrderStatusInRestaurantOrders,
+	removeOrderFromRiderReadyOrders,
 	type RestaurantOrderRow,
 	type RiderReadyOrderRow,
 } from "./templatePalletTxEvents";
+import { orderStatusVariant } from "./orderCodec";
 
 export type ApplyTemplatePalletTxContext = {
 	queryClient: QueryClient;
@@ -46,13 +48,27 @@ export function applyTemplatePalletTxToQueryCache(
 				statusChanged.status,
 			),
 		);
-		// A status transition may add (InProgress → ReadyForPickup) or remove
-		// (ReadyForPickup → OnItsWay) an entry from the rider's available list;
-		// we don't have the full row payload from the event, so refetch.
-		void queryClient.invalidateQueries({
-			queryKey: ["riderReadyPickupOrders"],
-			exact: false,
-		});
+		// Update the rider's "Available Orders" list based on the new status:
+		//  - Leaving `ReadyForPickup` (currently only `confirm_delivery_pickup`):
+		//    drop the row in place from the cache so the rider's UI updates
+		//    instantly after "Mark on its way".
+		//  - Entering `ReadyForPickup` (restaurant's `advance_order_status`):
+		//    we don't have the full row payload in the event, so refetch.
+		if (orderStatusVariant(statusChanged.status) !== "ReadyForPickup") {
+			queryClient.setQueriesData(
+				{ queryKey: ["riderReadyPickupOrders"], exact: false },
+				(prev) =>
+					removeOrderFromRiderReadyOrders(
+						prev as RiderReadyOrderRow[] | undefined,
+						statusChanged.orderId,
+					),
+			);
+		} else {
+			void queryClient.invalidateQueries({
+				queryKey: ["riderReadyPickupOrders"],
+				exact: false,
+			});
+		}
 	}
 
 	const deliveryClaimed = parseOrderDeliveryClaimedFromTxEvents(events);

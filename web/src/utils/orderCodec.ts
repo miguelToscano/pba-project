@@ -22,16 +22,32 @@ export function orderStatusDisplay(status: unknown): string {
 	return STATUS_DISPLAY[v] ?? v;
 }
 
-const ADVANCE_LABEL: Record<string, string> = {
+/**
+ * Labels the *restaurant* uses to advance an order. Deliberately stops at
+ * `InProgress → ReadyForPickup`: the pallet rejects `advance_order_status`
+ * past `ReadyForPickup` (that transition is the rider's `confirm_delivery_pickup`),
+ * so showing a button on either of those states would always fail on-chain.
+ */
+const RESTAURANT_ADVANCE_LABEL: Record<string, string> = {
 	Created: "Mark in progress",
 	InProgress: "Mark ready for pickup",
-	ReadyForPickup: "Mark on its way",
 };
 
 export function nextAdvanceActionLabel(status: unknown): string | null {
 	const v = orderStatusVariant(status);
-	if (v === "OnItsWay") return null;
-	return ADVANCE_LABEL[v] ?? "Advance status";
+	return RESTAURANT_ADVANCE_LABEL[v] ?? null;
+}
+
+/**
+ * What the restaurant sees in the Action column when there is no button to
+ * press — either the rider must pick up the order, or the order has already
+ * left the kitchen.
+ */
+export function restaurantTerminalActionLabel(status: unknown): string | null {
+	const v = orderStatusVariant(status);
+	if (v === "ReadyForPickup") return "Awaiting rider pickup";
+	if (v === "OnItsWay") return "Handed over to rider";
+	return null;
 }
 
 function parseLineIndexAndQty(line: unknown): { idx: number; qty: number } | null {
