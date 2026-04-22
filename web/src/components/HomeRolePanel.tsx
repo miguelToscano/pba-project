@@ -327,12 +327,7 @@ export default function HomeRolePanel({
 				</div>
 			)}
 
-			{activeTab === "restaurant" && (
-				<div className="space-y-6">
-					<RestaurantOrdersPanel />
-					<RestaurantOnChainMenu />
-				</div>
-			)}
+			{activeTab === "restaurant" && <RestaurantTabs />}
 
 			{activeTab === "rider" && <RiderReadyPickupOrders isRider={isRider} />}
 		</div>
@@ -617,6 +612,55 @@ function CustomerMyOrders() {
 	);
 }
 
+type RestaurantSubTab = "orders" | "menu";
+
+const RESTAURANT_SUB_TABS: Array<{ id: RestaurantSubTab; label: string }> = [
+	{ id: "orders", label: "Orders" },
+	{ id: "menu", label: "Menu" },
+];
+
+/**
+ * Restaurant-role sub-navigation: swaps between the incoming Orders table
+ * and the on-chain Menu table. Rendering a single table at a time keeps the
+ * card compact and gives both sections equal vertical space, unlike the
+ * previous stacked layout where long order lists pushed the menu off-screen.
+ */
+function RestaurantTabs() {
+	const [subTab, setSubTab] = useState<RestaurantSubTab>("orders");
+
+	return (
+		<div className="space-y-4">
+			<div
+				role="tablist"
+				aria-label="Restaurant sections"
+				className="flex flex-wrap gap-1.5 border-b border-white/[0.08] pb-3"
+			>
+				{RESTAURANT_SUB_TABS.map((tab) => {
+					const active = subTab === tab.id;
+					return (
+						<button
+							key={tab.id}
+							type="button"
+							role="tab"
+							aria-selected={active}
+							onClick={() => setSubTab(tab.id)}
+							className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+								active
+									? "bg-polka-500/20 text-text-primary border border-polka-500/30"
+									: "text-text-secondary hover:text-text-primary hover:bg-white/[0.04]"
+							}`}
+						>
+							{tab.label}
+						</button>
+					);
+				})}
+			</div>
+
+			{subTab === "orders" ? <RestaurantOrdersPanel /> : <RestaurantOnChainMenu />}
+		</div>
+	);
+}
+
 function RestaurantOrdersPanel() {
 	const { address } = useAccount();
 	const connected = useChainStore((s) => s.connected);
@@ -680,7 +724,6 @@ function RestaurantOrdersPanel() {
 
 	return (
 		<div>
-			<GradientSectionTitle>Orders</GradientSectionTitle>
 			<p className="text-xs text-text-tertiary mb-2 text-center">
 				From{" "}
 				<code className="font-mono text-text-muted">TemplatePallet::RestaurantOrders</code>{" "}
@@ -1057,7 +1100,6 @@ function RestaurantOnChainMenu() {
 
 	return (
 		<div>
-			<GradientSectionTitle>Menu</GradientSectionTitle>
 			<p className="text-xs text-text-tertiary mb-2 text-center">
 				From chain storage{" "}
 				<code className="font-mono text-text-muted">TemplatePallet::Restaurants</code>
