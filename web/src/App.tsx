@@ -2,6 +2,7 @@ import { Outlet, Link, useLocation } from "react-router-dom";
 import { ConnectButton } from "@luno-kit/ui";
 import { useChainStore } from "./store/chainStore";
 import { useConnectionManagement } from "./hooks/useConnection";
+import ChatDock from "./components/ChatDock";
 
 export default function App() {
 	const location = useLocation();
@@ -105,6 +106,9 @@ export default function App() {
 			<main className="relative z-10 max-w-5xl mx-auto px-4 py-8">
 				<Outlet />
 			</main>
+
+			{/* Messenger-style floating chat dock (bottom-right, global across routes). */}
+			<ChatDock />
 		</div>
 	);
 }

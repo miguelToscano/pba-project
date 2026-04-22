@@ -22,7 +22,6 @@ const queryClient = new QueryClient({
 const HomePage = lazy(() => import("./pages/HomePage"));
 const AccountsPage = lazy(() => import("./pages/AccountsPage"));
 const StatementStorePage = lazy(() => import("./pages/StatementStorePage"));
-const ChatPage = lazy(() => import("./pages/ChatPage"));
 
 const routeFallback = (
 	<div className="card animate-pulse">
@@ -60,14 +59,6 @@ createRoot(document.getElementById("root")!).render(
 									element={
 										<Suspense fallback={routeFallback}>
 											<StatementStorePage />
-										</Suspense>
-									}
-								/>
-								<Route
-									path="chat/:orderId"
-									element={
-										<Suspense fallback={routeFallback}>
-											<ChatPage />
 										</Suspense>
 									}
 								/>

@@ -1,10 +1,10 @@
 import { Binary } from "polkadot-api";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAccount, usePapiSigner } from "@luno-kit/react";
 import { stack_template } from "@polkadot-api/descriptors";
 import { useChainStore } from "../store/chainStore";
+import { useChatDockStore } from "../store/chatDockStore";
 import { getClient } from "../hooks/useChain";
 import { bytesToHex, ss58ToPublicKey } from "../utils/chatCodec";
 import {
@@ -91,6 +91,7 @@ function RiderReadyPickupOrders({ isRider }: { isRider: boolean | null }) {
 	const queryClient = useQueryClient();
 	const { data: walletSigner, isLoading: signerLoading } = usePapiSigner();
 	const [claimMsg, setClaimMsg] = useState<string | null>(null);
+	const openChat = useChatDockStore((s) => s.openChat);
 
 	const query = useQuery({
 		queryKey: ["riderReadyPickupOrders", wsUrl],
@@ -234,12 +235,13 @@ function RiderReadyPickupOrders({ isRider }: { isRider: boolean | null }) {
 									<td className="py-3 px-3 whitespace-nowrap">
 										{row.assignedRider ? (
 											sameAccount(row.assignedRider, address) ? (
-												<Link
-													to={`/chat/${row.id.toString()}`}
-													className="btn-secondary text-xs px-2.5 py-1 inline-block"
+												<button
+													type="button"
+													onClick={() => openChat(row.id)}
+													className="btn-secondary text-xs px-2.5 py-1"
 												>
 													Chat
-												</Link>
+												</button>
 											) : (
 												<span className="text-xs text-text-tertiary">
 													Claimed
@@ -448,6 +450,7 @@ function CustomerMyOrders() {
 	const connected = useChainStore((s) => s.connected);
 	const wsUrl = useChainStore((s) => s.wsUrl);
 	const templatePallet = useChainStore((s) => s.pallets.templatePallet);
+	const openChat = useChatDockStore((s) => s.openChat);
 
 	const query = useQuery({
 		queryKey: ["customerMyOrders", address, wsUrl],
@@ -548,12 +551,13 @@ function CustomerMyOrders() {
 												{shortAddress(assignedRider)}
 											</span>
 										</p>
-										<Link
-											to={`/chat/${String(id)}`}
+										<button
+											type="button"
+											onClick={() => openChat(id)}
 											className="btn-secondary text-xs px-2 py-1"
 										>
 											Chat
-										</Link>
+										</button>
 									</div>
 								)}
 								{lineDetails.length > 0 ? (
