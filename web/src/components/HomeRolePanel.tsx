@@ -191,11 +191,14 @@ function RiderReadyPickupOrders({ isRider }: { isRider: boolean | null }) {
 			setClaimMsg(null);
 		},
 		onSuccess: (result) => {
+			// `applyTemplatePalletTxToQueryCache` handles the `OrderDeliveryClaimed`
+			// event: it patches the just-claimed row in all affected order lists
+			// (including this one) and pre-seeds `chatOrder`, so we don't need
+			// an extra `invalidateQueries` round-trip to storage here.
 			applyTemplatePalletTxToQueryCache(
 				{ queryClient, wsUrl, walletAddress: address ?? undefined },
 				result,
 			);
-			void queryClient.invalidateQueries({ queryKey: ["riderReadyPickupOrders", wsUrl] });
 		},
 		onError: (e) => {
 			setClaimMsg(e instanceof Error ? e.message : String(e));
@@ -550,7 +553,7 @@ function CustomerMyOrders() {
 				</p>
 			)}
 			{query.isSuccess && query.data && query.data.length > 0 && (
-				<ul className="mx-auto w-full max-w-md rounded-lg border border-white/[0.06] divide-y divide-white/[0.06] text-left text-sm">
+				<ul className="mx-auto w-full max-w-md space-y-3 text-left text-sm">
 					{query.data.map(({ id, order, menu, assignedRider }) => {
 						if (!order) return null;
 						const o = order as {
@@ -565,7 +568,10 @@ function CustomerMyOrders() {
 								? loadDeliveryPin(wsUrl, address, orderIdBig)
 								: null;
 						return (
-							<li key={String(id)} className="px-3 py-2.5 space-y-2">
+							<li
+								key={String(id)}
+								className="rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-3 space-y-2 shadow-sm"
+							>
 								<div className="flex justify-between gap-2 items-start">
 									<span className="font-mono text-xs text-text-secondary">
 										#{String(id)}

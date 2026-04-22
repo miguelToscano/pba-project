@@ -1,6 +1,14 @@
 /** One row in order list queries (`restaurantOrders` / `customerMyOrders`). */
 export type RestaurantOrderRow = { id: bigint; order: unknown };
 
+/** One row in the `riderReadyPickupOrders` query (flattened, no nested `order`). */
+export type RiderReadyOrderRow = {
+	id: bigint;
+	customer: string;
+	restaurant: string;
+	assignedRider: string | null;
+};
+
 export function toOrderId(raw: unknown): bigint | null {
 	if (typeof raw === "bigint") return raw;
 	if (typeof raw === "number" && Number.isInteger(raw) && raw >= 0) return BigInt(raw);
@@ -72,6 +80,22 @@ export function parseOrderPlacedFromTxEvents(events: unknown): {
 	return { orderId, customer, restaurant };
 }
 
+/**
+ * Payload for the pallet's `OrderDeliveryClaimed { order_id, rider }` event,
+ * extracted from a tx inclusion result.
+ */
+export function parseOrderDeliveryClaimedFromTxEvents(events: unknown): {
+	orderId: bigint;
+	rider: string;
+} | null {
+	const v = findLastEventPayloadByType(events, "OrderDeliveryClaimed");
+	if (!v) return null;
+	const orderId = toOrderId(v.order_id);
+	const rider = typeof v.rider === "string" ? v.rider : null;
+	if (orderId === null || !rider) return null;
+	return { orderId, rider };
+}
+
 /** Immutable update of one order's `status` in an orders query value. */
 export function patchOrderStatusInRestaurantOrders(
 	prev: RestaurantOrderRow[] | undefined,
@@ -89,6 +113,58 @@ export function patchOrderStatusInRestaurantOrders(
 			...row,
 			order: { ...(order as Record<string, unknown>), status },
 		};
+	});
+	return touched ? next : prev;
+}
+
+/**
+ * Immutable update of one order's `assigned_rider` in `restaurantOrders` /
+ * `customerMyOrders` query values. `customerMyOrders` rows also carry a
+ * row-level `assignedRider` derived once from `order.assigned_rider`; we keep
+ * both in sync so the UI updates without another storage round-trip.
+ */
+export function patchOrderAssignedRiderInOrdersLists(
+	prev: RestaurantOrderRow[] | undefined,
+	orderId: bigint,
+	rider: string,
+): RestaurantOrderRow[] | undefined {
+	if (!prev?.length) return prev;
+	let touched = false;
+	const next = prev.map((row) => {
+		if (row.id !== orderId) return row;
+		const order = row.order;
+		if (!order || typeof order !== "object") return row;
+		touched = true;
+		const patched: Record<string, unknown> = {
+			...row,
+			order: {
+				...(order as Record<string, unknown>),
+				assigned_rider: { type: "Some", value: rider },
+			},
+		};
+		if ("assignedRider" in (row as Record<string, unknown>)) {
+			patched.assignedRider = rider;
+		}
+		return patched as RestaurantOrderRow;
+	});
+	return touched ? next : prev;
+}
+
+/**
+ * Immutable update of one row's `assignedRider` in the flat
+ * `riderReadyPickupOrders` query value (no nested `order` on these rows).
+ */
+export function patchAssignedRiderInRiderReadyOrders(
+	prev: RiderReadyOrderRow[] | undefined,
+	orderId: bigint,
+	rider: string,
+): RiderReadyOrderRow[] | undefined {
+	if (!prev?.length) return prev;
+	let touched = false;
+	const next = prev.map((row) => {
+		if (row.id !== orderId) return row;
+		touched = true;
+		return { ...row, assignedRider: rider };
 	});
 	return touched ? next : prev;
 }

@@ -2,10 +2,14 @@ import type { QueryClient } from "@tanstack/react-query";
 import type { TxInclusionResult } from "./signAndSubmitBestBlock";
 import {
 	findLastEventPayloadByType,
+	parseOrderDeliveryClaimedFromTxEvents,
 	parseOrderPlacedFromTxEvents,
 	parseOrderStatusChangedFromTxEvents,
+	patchAssignedRiderInRiderReadyOrders,
+	patchOrderAssignedRiderInOrdersLists,
 	patchOrderStatusInRestaurantOrders,
 	type RestaurantOrderRow,
+	type RiderReadyOrderRow,
 } from "./templatePalletTxEvents";
 
 export type ApplyTemplatePalletTxContext = {
@@ -42,13 +46,50 @@ export function applyTemplatePalletTxToQueryCache(
 				statusChanged.status,
 			),
 		);
-	}
-
-	const deliveryClaimed = findLastEventPayloadByType(events, "OrderDeliveryClaimed");
-	if (statusChanged || deliveryClaimed) {
+		// A status transition may add (InProgress → ReadyForPickup) or remove
+		// (ReadyForPickup → OnItsWay) an entry from the rider's available list;
+		// we don't have the full row payload from the event, so refetch.
 		void queryClient.invalidateQueries({
 			queryKey: ["riderReadyPickupOrders"],
 			exact: false,
+		});
+	}
+
+	const deliveryClaimed = parseOrderDeliveryClaimedFromTxEvents(events);
+	if (deliveryClaimed) {
+		// Patch restaurant / customer order lists so the "Chat" affordance on
+		// those views flips on immediately for the signer (the rider), without
+		// a storage round-trip.
+		queryClient.setQueriesData({ queryKey: ["restaurantOrders"], exact: false }, (prev) =>
+			patchOrderAssignedRiderInOrdersLists(
+				prev as RestaurantOrderRow[] | undefined,
+				deliveryClaimed.orderId,
+				deliveryClaimed.rider,
+			),
+		);
+		queryClient.setQueriesData({ queryKey: ["customerMyOrders"], exact: false }, (prev) =>
+			patchOrderAssignedRiderInOrdersLists(
+				prev as RestaurantOrderRow[] | undefined,
+				deliveryClaimed.orderId,
+				deliveryClaimed.rider,
+			),
+		);
+		// Rider's "Available Orders" list uses a flat row shape.
+		queryClient.setQueriesData({ queryKey: ["riderReadyPickupOrders"], exact: false }, (prev) =>
+			patchAssignedRiderInRiderReadyOrders(
+				prev as RiderReadyOrderRow[] | undefined,
+				deliveryClaimed.orderId,
+				deliveryClaimed.rider,
+			),
+		);
+		// Pre-seed the chat window's per-order query so opening the chat right
+		// after a claim doesn't have to wait for its 8s poll to discover the rider.
+		const chatKey = ["chatOrder", wsUrl, deliveryClaimed.orderId.toString()] as const;
+		type ChatOrder = { customer: string | null; rider: string | null };
+		const prevChat = queryClient.getQueryData<ChatOrder>(chatKey);
+		queryClient.setQueryData<ChatOrder>(chatKey, {
+			customer: prevChat?.customer ?? null,
+			rider: deliveryClaimed.rider,
 		});
 	}
 
