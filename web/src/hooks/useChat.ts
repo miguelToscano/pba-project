@@ -210,20 +210,56 @@ export function useChat({
 		};
 	}, [wsUrl]);
 
-	// Poll thread statements.
+	// Poll thread statements. After each poll, if the cached delegation we
+	// previously broadcast is no longer in the remote store, we silently
+	// re-submit it using the cached wallet signature. This is needed because
+	// (a) the dev node's statement store is in-memory and wipes on restart,
+	// and (b) once the delegation drops from the store, no message statement
+	// — not even our own — passes the authenticator filter below, so the chat
+	// would appear empty until the user clicked "Enable chat" again.
 	useEffect(() => {
 		if (statementStoreAvailable !== true) return;
 		if (!topics) return;
+		if (!myRealAddress || orderId === null) return;
 
 		let cancelled = false;
 		let timer: ReturnType<typeof setTimeout> | null = null;
+		let rehydrating = false;
 
 		async function load() {
 			try {
 				const result = await fetchStatementsByTopics(wsUrl, topics!);
-				if (!cancelled) {
-					setRawStatements(result);
-					setLoadError(null);
+				if (cancelled) return;
+				setRawStatements(result);
+				setLoadError(null);
+
+				const cached = loadCachedDelegation(wsUrl, myRealAddress!, orderId!);
+				if (!cached || !ephemeralKeyRef.current || rehydrating) return;
+				if (cached.expiresAtMs <= BigInt(Date.now())) return;
+				const myEphHex = bytesToHex(ephemeralKeyRef.current.publicKey).toLowerCase();
+				const cachedEphHex = bytesToHex(cached.envelope.ephemeralPub).toLowerCase();
+				if (myEphHex !== cachedEphHex) return;
+				// Is OUR delegation represented in the remote store already?
+				const mineOnChain = result.some((stmt) => {
+					if (!stmt.data || stmt.proofType !== "Sr25519" || !stmt.signer) return false;
+					return stmt.signer.toLowerCase() === myEphHex;
+				});
+				if (mineOnChain) return;
+
+				rehydrating = true;
+				try {
+					const envelope = encodeChatEnvelope(cached.envelope);
+					await submitSignedStatement(wsUrl, {
+						data: envelope,
+						publicKey: ephemeralKeyRef.current.publicKey,
+						sign: ephemeralKeyRef.current.sign,
+						topics: topics ? [...topics] : [],
+						priority: 0xffff_ffff,
+					});
+				} catch {
+					// swallow — next poll will retry
+				} finally {
+					rehydrating = false;
 				}
 			} catch (e) {
 				if (!cancelled) {
@@ -241,7 +277,7 @@ export function useChat({
 			cancelled = true;
 			if (timer) clearTimeout(timer);
 		};
-	}, [wsUrl, topics, statementStoreAvailable, pollIntervalMs]);
+	}, [wsUrl, topics, statementStoreAvailable, pollIntervalMs, myRealAddress, orderId]);
 
 	// Index all *valid* delegations we can see in the thread, keyed by
 	// ephemeral pubkey. This is what authenticates a chat message sender.

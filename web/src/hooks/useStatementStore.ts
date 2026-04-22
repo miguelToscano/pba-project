@@ -394,6 +394,9 @@ export async function fetchStatementsByTopics(
 	if (topics.length === 0 || topics.length > 4) {
 		throw new Error(`Statement Store requires 1..=4 topics, got ${topics.length}.`);
 	}
+	for (const topic of topics) {
+		ensureFixedLength(topic, 32, "Statement Store topic");
+	}
 	const httpUrl = wsToHttp(wsUrl);
 	const response = await fetch(httpUrl, {
 		method: "POST",
@@ -402,7 +405,13 @@ export async function fetchStatementsByTopics(
 			jsonrpc: "2.0",
 			id: 1,
 			method: "statement_broadcastsStatement",
-			params: [topics.map((t) => `0x${bytesToHex(t)}`)],
+			// `statement_broadcastsStatement` declares `match_all_topics: Vec<[u8; 32]>`.
+			// serde's default `[u8; 32]` deserializer expects a JSON array of 32
+			// numbers, not a `0x`-prefixed hex string (that shape is reserved for
+			// fields typed as `sp_core::Bytes`, e.g. `statement_submit`). Passing
+			// hex here yields `invalid type: string "0x…", expected an array of
+			// length 32`.
+			params: [topics.map((t) => Array.from(t))],
 		}),
 	});
 

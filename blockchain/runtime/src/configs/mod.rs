@@ -266,10 +266,18 @@ impl pallet_collator_selection::Config for Runtime {
 // StatementByteCost: per-byte fee (existential deposit / 1024).
 // Min/MaxAllowedStatements: per-account statement count limits.
 // Min/MaxAllowedBytes: per-account total byte limits (1 MiB to 16 MiB).
+//
+// Note: MinAllowedStatements is set to 16 so that ephemeral / unfunded
+// accounts (e.g. browser session keys used by the P2P chat feature) can
+// still store statements. The runtime computes `max_count = balance /
+// StatementCost` clamped to [Min, Max]AllowedStatements, so an account
+// with zero balance would otherwise be limited to `MinAllowedStatements`
+// slots. Keeping the floor equal to the ceiling gives every account the
+// full quota on this developer template.
 parameter_types! {
 	pub const StatementCost: Balance = 10 * EXISTENTIAL_DEPOSIT;
 	pub const StatementByteCost: Balance = EXISTENTIAL_DEPOSIT / 1024;
-	pub const MinAllowedStatements: u32 = 1;
+	pub const MinAllowedStatements: u32 = 16;
 	pub const MaxAllowedStatements: u32 = 16;
 	pub const MinAllowedBytes: u32 = 1024 * 1024;
 	pub const MaxAllowedBytes: u32 = 16 * 1024 * 1024;
