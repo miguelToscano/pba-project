@@ -239,12 +239,19 @@ export function useChat({
 				const myEphHex = bytesToHex(ephemeralKeyRef.current.publicKey).toLowerCase();
 				const cachedEphHex = bytesToHex(cached.envelope.ephemeralPub).toLowerCase();
 				if (myEphHex !== cachedEphHex) return;
-				// Is OUR delegation represented in the remote store already?
-				const mineOnChain = result.some((stmt) => {
+				// Is OUR delegation (not just any statement) represented in the
+				// remote store already? We must decode the envelope and look
+				// specifically for a `Delegation` variant — chat messages are
+				// also signed by our ephemeral key, so checking on signer
+				// alone would skip rehydration forever once we've sent one
+				// message, leaving the thread unauthenticable for everyone.
+				const delegationOnChain = result.some((stmt) => {
 					if (!stmt.data || stmt.proofType !== "Sr25519" || !stmt.signer) return false;
-					return stmt.signer.toLowerCase() === myEphHex;
+					if (stmt.signer.toLowerCase() !== myEphHex) return false;
+					const env = decodeChatEnvelope(stmt.data);
+					return env?.kind === "delegation";
 				});
-				if (mineOnChain) return;
+				if (delegationOnChain) return;
 
 				rehydrating = true;
 				try {
