@@ -64,6 +64,13 @@ export function applyTemplatePalletTxToQueryCache(
 
 	if (!walletAddress) return;
 
+	// Every tx pays a fee, so the signer's free balance always changes.
+	// Invalidate the balance query so the role-panel balance badge refreshes
+	// promptly without waiting for the query's staleTime to elapse.
+	void queryClient.invalidateQueries({
+		queryKey: ["accountBalance", walletAddress, wsUrl],
+	});
+
 	const rolesKey = ["accountRoles", walletAddress, wsUrl] as const;
 	type Roles = { isCustomer: boolean; isRestaurant: boolean; isRider: boolean };
 

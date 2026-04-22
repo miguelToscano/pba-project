@@ -2,9 +2,12 @@
 
 use super::*;
 use frame::{
-	deps::frame_benchmarking::{account, v2::*},
+	deps::{
+		frame_benchmarking::{account, v2::*},
+		frame_support::assert_ok,
+	},
 	prelude::*,
-	testing_prelude::assert_ok,
+	traits::tokens::fungible::Mutate,
 };
 
 #[benchmarks]
@@ -13,6 +16,15 @@ mod benchmarks {
 	#[cfg(test)]
 	use crate::pallet::Pallet as ProofOfExistence;
 	use frame_system::RawOrigin;
+	use scale_info::prelude::vec;
+
+	/// Fund the given account with enough native balance to place the benchmarked order.
+	/// Uses `set_balance` so we don't depend on a second pre-funded origin existing.
+	fn fund<T: Config>(who: &T::AccountId) {
+		// Enough for the item total + `DeliveryFee` and still stay above ED in any
+		// reasonable runtime configuration; well below `u128::MAX`.
+		let _ = T::NativeBalance::set_balance(who, u128::MAX / 2);
+	}
 
 	#[benchmark]
 	fn create_claim() {
@@ -83,6 +95,7 @@ mod benchmarks {
 		let menu = BoundedVec::<MenuItem, ConstU32<64>>::try_from(vec![item]).unwrap();
 		Customers::<T>::insert(&customer, Customer);
 		Restaurants::<T>::insert(&restaurant, Restaurant { name, menu });
+		fund::<T>(&customer);
 		let lines = BoundedVec::<OrderLine, MaxOrderLines>::try_from(vec![OrderLine {
 			menu_index: 0,
 			quantity: 1,
@@ -107,6 +120,7 @@ mod benchmarks {
 		let menu = BoundedVec::<MenuItem, ConstU32<64>>::try_from(vec![item]).unwrap();
 		Customers::<T>::insert(&customer, Customer);
 		Restaurants::<T>::insert(&restaurant, Restaurant { name, menu });
+		fund::<T>(&customer);
 		let lines = BoundedVec::<OrderLine, MaxOrderLines>::try_from(vec![OrderLine {
 			menu_index: 0,
 			quantity: 1,
@@ -139,6 +153,7 @@ mod benchmarks {
 		Customers::<T>::insert(&customer, Customer);
 		Restaurants::<T>::insert(&restaurant, Restaurant { name, menu });
 		Riders::<T>::insert(&rider, Rider);
+		fund::<T>(&customer);
 		let lines = BoundedVec::<OrderLine, MaxOrderLines>::try_from(vec![OrderLine {
 			menu_index: 0,
 			quantity: 1,
@@ -177,6 +192,7 @@ mod benchmarks {
 		Customers::<T>::insert(&customer, Customer);
 		Restaurants::<T>::insert(&restaurant, Restaurant { name, menu });
 		Riders::<T>::insert(&rider, Rider);
+		fund::<T>(&customer);
 		let lines = BoundedVec::<OrderLine, MaxOrderLines>::try_from(vec![OrderLine {
 			menu_index: 0,
 			quantity: 1,

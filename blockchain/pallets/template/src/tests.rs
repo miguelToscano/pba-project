@@ -3,6 +3,7 @@ use crate::{
 	OrderStatus, Orders, RestaurantOrders, Riders,
 };
 use frame::testing_prelude::*;
+use pallet_balances::Pallet as BalancesPallet;
 
 fn test_hash(n: u64) -> H256 {
 	H256::from_low_u64_be(n)
@@ -219,8 +220,79 @@ fn place_order_works_and_indexes() {
 		assert_eq!(order.restaurant, 2);
 		assert_eq!(order.status, OrderStatus::Created);
 		assert_eq!(order.hashed_pin, hashed_pin);
+		// price = 100 (menu item) * 2 (quantity); delivery_fee = mock `DELIVERY_FEE`.
+		assert_eq!(order.price, 200);
+		assert_eq!(order.delivery_fee, DELIVERY_FEE);
 		assert_eq!(CustomerOrders::<Test>::get(1).as_slice(), &[0u64]);
 		assert_eq!(RestaurantOrders::<Test>::get(2).as_slice(), &[0u64]);
+	});
+}
+
+#[test]
+fn place_order_debits_customer_into_pallet_account() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(ProofOfExistence::create_customer(RuntimeOrigin::signed(1)));
+		let venue = BoundedVec::try_from(b"Cafe".to_vec()).unwrap();
+		let menu = BoundedVec::try_from(vec![sample_menu_item(b"Burger")]).unwrap();
+		assert_ok!(ProofOfExistence::create_restaurant(RuntimeOrigin::signed(2), venue, menu));
+
+		let pallet_account = ProofOfExistence::account_id();
+		let customer_before = BalancesPallet::<Test>::free_balance(1);
+		let pallet_before = BalancesPallet::<Test>::free_balance(&pallet_account);
+
+		let lines = BoundedVec::try_from(vec![OrderLine { menu_index: 0, quantity: 2 }]).unwrap();
+		assert_ok!(ProofOfExistence::place_order(
+			RuntimeOrigin::signed(1),
+			2,
+			lines,
+			test_hash(11),
+		));
+
+		let total = 200u128 + DELIVERY_FEE;
+		assert_eq!(BalancesPallet::<Test>::free_balance(1), customer_before - total);
+		assert_eq!(BalancesPallet::<Test>::free_balance(&pallet_account), pallet_before + total);
+	});
+}
+
+#[test]
+fn place_order_emits_paid_event() {
+	new_test_ext().execute_with(|| {
+		System::set_block_number(1);
+		assert_ok!(ProofOfExistence::create_customer(RuntimeOrigin::signed(1)));
+		let venue = BoundedVec::try_from(b"Cafe".to_vec()).unwrap();
+		let menu = BoundedVec::try_from(vec![sample_menu_item(b"Burger")]).unwrap();
+		assert_ok!(ProofOfExistence::create_restaurant(RuntimeOrigin::signed(2), venue, menu));
+
+		let lines = BoundedVec::try_from(vec![OrderLine { menu_index: 0, quantity: 3 }]).unwrap();
+		assert_ok!(ProofOfExistence::place_order(
+			RuntimeOrigin::signed(1),
+			2,
+			lines,
+			test_hash(12),
+		));
+
+		let total = 300u128 + DELIVERY_FEE;
+		System::assert_has_event(
+			crate::Event::OrderPaid { order_id: 0, customer: 1, amount: total }.into(),
+		);
+	});
+}
+
+#[test]
+fn place_order_fails_when_customer_cannot_pay() {
+	new_test_ext().execute_with(|| {
+		// Account id 99 has no funds in the mock genesis (only 1..=10 are endowed).
+		assert_ok!(ProofOfExistence::create_customer(RuntimeOrigin::signed(99)));
+		let venue = BoundedVec::try_from(b"Cafe".to_vec()).unwrap();
+		let menu = BoundedVec::try_from(vec![sample_menu_item(b"Burger")]).unwrap();
+		assert_ok!(ProofOfExistence::create_restaurant(RuntimeOrigin::signed(2), venue, menu));
+
+		let lines = BoundedVec::try_from(vec![OrderLine { menu_index: 0, quantity: 1 }]).unwrap();
+		// `transfer` with an insufficient source surfaces a `TokenError` dispatch error,
+		// which is specifically what we want to assert isn't swallowed by the pallet.
+		assert!(ProofOfExistence::place_order(RuntimeOrigin::signed(99), 2, lines, test_hash(13))
+			.is_err());
+		assert!(Orders::<Test>::get(0).is_none());
 	});
 }
 

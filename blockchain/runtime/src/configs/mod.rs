@@ -294,9 +294,21 @@ impl pallet_statement::Config for Runtime {
 	type MaxAllowedBytes = MaxAllowedBytes;
 }
 
+parameter_types! {
+	/// Pallet id used to derive the pallet-owned account that holds customer order
+	/// payments until settlement to the restaurant / rider is implemented.
+	pub const TemplatePalletId: PalletId = PalletId(*b"py/tmplt");
+	/// Flat delivery fee charged on every order in addition to the menu-item total.
+	/// Value is in the native token's smallest unit (planck); adjust freely.
+	pub const DeliveryFee: Balance = 500;
+}
+
 /// Configure the template proof-of-existence pallet.
 impl pallet_template::Config for Runtime {
 	type WeightInfo = pallet_template::weights::SubstrateWeight<Runtime>;
+	type NativeBalance = Balances;
+	type PalletId = TemplatePalletId;
+	type DeliveryFee = DeliveryFee;
 }
 
 // ── pallet-revive (EVM + PVM smart contracts) ──────────────────────────

@@ -19,7 +19,8 @@ import {
 	orderStatusDisplay,
 	orderStatusVariant,
 } from "../utils/orderCodec";
-import { formatDispatchError } from "../utils/format";
+import { formatBalance, formatDispatchError, TOKEN_SYMBOL } from "../utils/format";
+import { useAccountBalance } from "../hooks/useAccountBalance";
 import {
 	hashDeliveryPinBlake2_256,
 	loadDeliveryPin,
@@ -81,6 +82,46 @@ function optionalSs58Account(value: unknown): string | null {
 		if (kind === "Some" && typeof v.value === "string") return v.value;
 	}
 	return null;
+}
+
+/**
+ * Compact pill showing the connected wallet's free native balance. Rendered
+ * once at the top of the role-panel card so it is visible for every role tab
+ * (Customer / Restaurant / Rider).
+ */
+function BalanceBadge() {
+	const { address } = useAccount();
+	const { free, isLoading, isError } = useAccountBalance();
+
+	if (!address) return null;
+
+	let content: ReactNode;
+	if (isLoading) {
+		content = <span className="text-text-tertiary">Loading balance…</span>;
+	} else if (isError || free === null) {
+		content = <span className="text-accent-red">Balance unavailable</span>;
+	} else {
+		content = (
+			<>
+				<span className="text-text-tertiary">Balance</span>
+				<span className="font-mono font-semibold tabular-nums bg-gradient-to-r from-polka-400 to-polka-600 bg-clip-text text-transparent">
+					{formatBalance(free)}
+				</span>
+				<span className="bg-gradient-to-r from-polka-400 to-polka-600 bg-clip-text text-transparent font-medium">
+					{TOKEN_SYMBOL}
+				</span>
+			</>
+		);
+	}
+
+	return (
+		<div
+			className="absolute top-4 right-4 z-10 inline-flex items-center gap-2 rounded-full border border-polka-500/25 bg-gradient-to-r from-polka-500/10 to-polka-600/10 px-3 py-1 text-xs shadow-sm backdrop-blur-sm"
+			title={address}
+		>
+			{content}
+		</div>
+	);
 }
 
 function RiderReadyPickupOrders({ isRider }: { isRider: boolean | null }) {
@@ -302,9 +343,10 @@ export default function HomeRolePanel({
 	}
 
 	return (
-		<div className="card space-y-5">
+		<div className="card space-y-5 relative">
+			<BalanceBadge />
 			{availableTabs.length > 1 && (
-				<div className="flex flex-wrap gap-1.5 border-b border-white/[0.08] pb-3">
+				<div className="flex flex-wrap gap-1.5 border-b border-white/[0.08] pb-3 pr-40 sm:pr-44">
 					{availableTabs.map((tab) => (
 						<button
 							key={tab}

@@ -10162,10 +10162,12 @@ dependencies = [
 name = "pallet-template"
 version = "0.1.0"
 dependencies = [
+ "pallet-balances",
  "parity-scale-codec",
  "polkadot-sdk-frame",
  "scale-info",
  "sp-io",
+ "sp-runtime",
 ]
 
 [[package]]

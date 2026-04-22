@@ -31,7 +31,17 @@ mod benchmarking;
 #[frame::pallet]
 pub mod pallet {
 	use crate::weights::WeightInfo;
-	use frame::prelude::*;
+	use frame::{
+		deps::frame_support::PalletId,
+		prelude::*,
+		traits::{
+			tokens::{
+				fungible::{Inspect, Mutate},
+				Preservation,
+			},
+			AccountIdConversion,
+		},
+	};
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
@@ -41,6 +51,24 @@ pub mod pallet {
 	pub trait Config: frame_system::Config {
 		/// A type representing the weights required by the dispatchables of this pallet.
 		type WeightInfo: WeightInfo;
+
+		/// Native balance handle used to debit customers when they place an order.
+		///
+		/// Pinned to `Balance = u128` so that on-chain order totals (computed from the
+		/// `u128` menu prices) line up with the native token's smallest unit without
+		/// requiring conversions.
+		type NativeBalance: Inspect<Self::AccountId, Balance = u128> + Mutate<Self::AccountId>;
+
+		/// Pallet id used to derive the pallet-owned account that holds customer payments
+		/// until they are later settled to restaurants / riders.
+		#[pallet::constant]
+		type PalletId: Get<PalletId>;
+
+		/// Flat delivery fee added to every order, charged to the customer alongside the
+		/// item total. Expressed in the native token's smallest unit (`u128`), matching
+		/// [`MenuItem::price`].
+		#[pallet::constant]
+		type DeliveryFee: Get<u128>;
 	}
 
 	/// A customer record (extensible; currently a marker type).
@@ -171,6 +199,12 @@ pub mod pallet {
 		pub hashed_pin: H256,
 		/// Rider assigned to deliver the order (if claimed).
 		pub assigned_rider: Option<T::AccountId>,
+		/// Snapshot of the item total (sum of `menu[line.menu_index].price * line.quantity`)
+		/// captured at order time, in the native token's smallest unit.
+		pub price: u128,
+		/// Flat delivery fee applied at order time (`T::DeliveryFee`), snapshotted so the
+		/// order stays consistent even if the runtime constant changes later.
+		pub delivery_fee: u128,
 	}
 
 	/// A proof-of-existence claim: who created it and when.
@@ -269,6 +303,9 @@ pub mod pallet {
 		OrderStatusChanged { order_id: OrderId, status: OrderStatus },
 		/// A rider claimed an order for delivery.
 		OrderDeliveryClaimed { order_id: OrderId, rider: T::AccountId },
+		/// A customer paid for an order. `amount` is `price + delivery_fee`, transferred
+		/// to the pallet-owned account and held there until settlement.
+		OrderPaid { order_id: OrderId, customer: T::AccountId, amount: u128 },
 	}
 
 	/// Errors that can occur in this pallet.
@@ -316,6 +353,8 @@ pub mod pallet {
 		OrderAwaitingRiderPickup,
 		/// Customer or restaurant order list is full.
 		OrderQueueFull,
+		/// Arithmetic overflow while computing an order's total price.
+		PriceOverflow,
 	}
 
 	/// Dispatchable calls.
@@ -406,10 +445,29 @@ pub mod pallet {
 			let venue = Restaurants::<T>::get(&restaurant).ok_or(Error::<T>::UnknownRestaurant)?;
 			ensure!(!lines.is_empty(), Error::<T>::EmptyOrder);
 			let menu_len = venue.menu.len() as u32;
+
+			// Compute the item total from the menu snapshot at order time, using
+			// checked math so a malicious menu can never overflow u128.
+			let mut price: u128 = 0;
 			for line in lines.iter() {
 				ensure!(line.quantity > 0, Error::<T>::InvalidQuantity);
 				ensure!(line.menu_index < menu_len, Error::<T>::InvalidMenuIndex);
+				let item = &venue.menu[line.menu_index as usize];
+				let line_total = item
+					.price
+					.checked_mul(line.quantity as u128)
+					.ok_or(Error::<T>::PriceOverflow)?;
+				price = price.checked_add(line_total).ok_or(Error::<T>::PriceOverflow)?;
 			}
+
+			let delivery_fee = T::DeliveryFee::get();
+			let total = price.checked_add(delivery_fee).ok_or(Error::<T>::PriceOverflow)?;
+
+			// Debit the customer and credit the pallet-owned account. `Preservation::Preserve`
+			// keeps the customer above their existential deposit; the transfer surfaces token
+			// errors (e.g. `FundsUnavailable`) as the dispatch error when balance is short.
+			let pallet_account = Self::account_id();
+			T::NativeBalance::transfer(&who, &pallet_account, total, Preservation::Preserve)?;
 
 			let order_id = NextOrderId::<T>::get();
 			NextOrderId::<T>::put(order_id.saturating_add(1));
@@ -421,6 +479,8 @@ pub mod pallet {
 				status: OrderStatus::Created,
 				hashed_pin,
 				assigned_rider: None,
+				price,
+				delivery_fee,
 			};
 			Orders::<T>::insert(order_id, order);
 
@@ -431,6 +491,11 @@ pub mod pallet {
 				ids.try_push(order_id).map_err(|_| Error::<T>::OrderQueueFull)
 			})?;
 
+			Self::deposit_event(Event::OrderPaid {
+				order_id,
+				customer: who.clone(),
+				amount: total,
+			});
 			Self::deposit_event(Event::OrderPlaced { order_id, customer: who, restaurant });
 			Ok(())
 		}
@@ -500,6 +565,16 @@ pub mod pallet {
 				status: OrderStatus::OnItsWay,
 			});
 			Ok(())
+		}
+	}
+
+	impl<T: Config> Pallet<T> {
+		/// Account id owned by this pallet, derived from [`Config::PalletId`].
+		///
+		/// Customer payments accumulate here until a future settlement step distributes
+		/// them to the restaurant and rider.
+		pub fn account_id() -> T::AccountId {
+			T::PalletId::get().into_account_truncating()
 		}
 	}
 }

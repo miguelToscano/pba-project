@@ -17,6 +17,8 @@ scale-info = { features = ["derive"], workspace = true }
 [dev-dependencies]
 frame = { workspace = true, features = ["std", "experimental", "runtime"] }
 sp-io = { workspace = true, features = ["std"] }
+sp-runtime = { workspace = true, features = ["std"] }
+pallet-balances = { workspace = true, features = ["std"] }
 
 [features]
 default = ["std"]

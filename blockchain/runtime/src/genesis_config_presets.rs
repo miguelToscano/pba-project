@@ -1,6 +1,7 @@
 use crate::{
-	AccountId, BalancesConfig, CollatorSelectionConfig, ParachainInfoConfig, PolkadotXcmConfig,
-	RuntimeGenesisConfig, SessionConfig, SessionKeys, SudoConfig, EXISTENTIAL_DEPOSIT,
+	configs::TemplatePalletId, AccountId, BalancesConfig, CollatorSelectionConfig,
+	ParachainInfoConfig, PolkadotXcmConfig, RuntimeGenesisConfig, SessionConfig, SessionKeys,
+	SudoConfig, EXISTENTIAL_DEPOSIT,
 };
 
 use alloc::{vec, vec::Vec};
@@ -8,11 +9,12 @@ use alloc::{vec, vec::Vec};
 use polkadot_sdk::{staging_xcm as xcm, *};
 
 use cumulus_primitives_core::ParaId;
-use frame_support::build_struct_json_patch;
+use frame_support::{build_struct_json_patch, PalletId};
 use parachains_common::AuraId;
 use serde_json::Value;
 use sp_genesis_builder::PresetId;
 use sp_keyring::Sr25519Keyring;
+use sp_runtime::traits::AccountIdConversion;
 use xcm::prelude::XCM_VERSION;
 
 /// The default XCM version to set in genesis config.
@@ -25,20 +27,27 @@ pub fn template_session_keys(keys: AuraId) -> SessionKeys {
 	SessionKeys { aura: keys }
 }
 
+/// Derive the `pallet-template` account id and return it endowed with one
+/// [`EXISTENTIAL_DEPOSIT`]. Pre-funding guarantees that the very first
+/// `place_order` succeeds even when the transferred amount (item total + delivery
+/// fee) is below ED — the account already exists so no ED-create check fires.
+fn template_pallet_endowment() -> (AccountId, u128) {
+	let id: PalletId = TemplatePalletId::get();
+	(id.into_account_truncating(), EXISTENTIAL_DEPOSIT)
+}
+
 fn testnet_genesis(
 	invulnerables: Vec<(AccountId, AuraId)>,
 	endowed_accounts: Vec<AccountId>,
 	root: AccountId,
 	id: ParaId,
 ) -> Value {
+	let mut balances: Vec<(AccountId, u128)> =
+		endowed_accounts.iter().cloned().map(|k| (k, 1u128 << 60)).collect();
+	balances.push(template_pallet_endowment());
+
 	build_struct_json_patch!(RuntimeGenesisConfig {
-		balances: BalancesConfig {
-			balances: endowed_accounts
-				.iter()
-				.cloned()
-				.map(|k| (k, 1u128 << 60))
-				.collect::<Vec<_>>(),
-		},
+		balances: BalancesConfig { balances },
 		parachain_info: ParachainInfoConfig { parachain_id: id },
 		collator_selection: CollatorSelectionConfig {
 			invulnerables: invulnerables.iter().cloned().map(|(acc, _)| acc).collect::<Vec<_>>(),
