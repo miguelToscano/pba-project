@@ -10,14 +10,25 @@ export interface ChatDockEntry {
 	minimized: boolean;
 	/** When it was last focused/reopened, used to order the windows in the dock. */
 	openedAtMs: number;
+	/**
+	 * Message the opener wants auto-sent as soon as the chat is ready.
+	 * Used e.g. when the rider confirms pickup and we want to auto-notify
+	 * the customer with "I'm on my way!". Cleared after the `ChatWindow`
+	 * successfully submits it.
+	 */
+	pendingOutgoingMessage: string | null;
 }
 
 interface ChatDockState {
 	entries: ChatDockEntry[];
-	openChat: (orderId: bigint) => void;
+	/** Opens (or focuses) a chat window. If `initialMessage` is provided, the
+	 *  window will auto-send it once the chat is ready. */
+	openChat: (orderId: bigint, initialMessage?: string) => void;
 	closeChat: (orderId: bigint) => void;
 	toggleMinimized: (orderId: bigint) => void;
 	focusChat: (orderId: bigint) => void;
+	/** Called by `ChatWindow` once it has successfully sent the queued message. */
+	clearPendingOutgoingMessage: (orderId: bigint) => void;
 }
 
 function orderKey(id: bigint): string {
@@ -33,7 +44,7 @@ function orderKey(id: bigint): string {
  */
 export const useChatDockStore = create<ChatDockState>((set) => ({
 	entries: [],
-	openChat: (orderId) =>
+	openChat: (orderId, initialMessage) =>
 		set((state) => {
 			const key = orderKey(orderId);
 			const now = Date.now();
@@ -42,13 +53,29 @@ export const useChatDockStore = create<ChatDockState>((set) => ({
 				return {
 					entries: state.entries.map((e) =>
 						orderKey(e.orderId) === key
-							? { ...e, minimized: false, openedAtMs: now }
+							? {
+									...e,
+									minimized: false,
+									openedAtMs: now,
+									// Don't clobber an already-queued message with `undefined`
+									// if the caller didn't pass a new one.
+									pendingOutgoingMessage:
+										initialMessage ?? e.pendingOutgoingMessage,
+								}
 							: e,
 					),
 				};
 			}
 			return {
-				entries: [...state.entries, { orderId, minimized: false, openedAtMs: now }],
+				entries: [
+					...state.entries,
+					{
+						orderId,
+						minimized: false,
+						openedAtMs: now,
+						pendingOutgoingMessage: initialMessage ?? null,
+					},
+				],
 			};
 		}),
 	closeChat: (orderId) =>
@@ -68,6 +95,14 @@ export const useChatDockStore = create<ChatDockState>((set) => ({
 			entries: state.entries.map((e) =>
 				orderKey(e.orderId) === orderKey(orderId)
 					? { ...e, minimized: false, openedAtMs: Date.now() }
+					: e,
+			),
+		})),
+	clearPendingOutgoingMessage: (orderId) =>
+		set((state) => ({
+			entries: state.entries.map((e) =>
+				orderKey(e.orderId) === orderKey(orderId)
+					? { ...e, pendingOutgoingMessage: null }
 					: e,
 			),
 		})),

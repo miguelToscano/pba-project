@@ -15,6 +15,7 @@ const STATUS_DISPLAY: Record<string, string> = {
 	InProgress: "In progress",
 	ReadyForPickup: "Ready for pickup",
 	OnItsWay: "On its way",
+	Completed: "Completed",
 };
 
 export function orderStatusDisplay(status: unknown): string {
@@ -47,6 +48,7 @@ export function restaurantTerminalActionLabel(status: unknown): string | null {
 	const v = orderStatusVariant(status);
 	if (v === "ReadyForPickup") return "Awaiting rider pickup";
 	if (v === "OnItsWay") return "Handed over to rider";
+	if (v === "Completed") return "Delivered & paid";
 	return null;
 }
 

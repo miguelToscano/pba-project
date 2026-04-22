@@ -385,3 +385,160 @@ fn advance_order_status_wrong_restaurant() {
 		);
 	});
 }
+
+// -- finish_order_delivery --------------------------------------------------
+//
+// Helper: drive an order all the way to `OnItsWay` with the given PIN, ready
+// to be finished. Returns `(hashed_pin, pin_bytes)`. Customer is account 1,
+// restaurant is 2, rider is 3; the restaurant has exactly one menu item at
+// price 100.
+fn make_order_on_its_way(pin: &[u8]) -> H256 {
+	use frame::deps::sp_core::hashing::blake2_256;
+	let hashed_pin = H256::from(blake2_256(pin));
+	assert_ok!(ProofOfExistence::create_customer(RuntimeOrigin::signed(1)));
+	let venue = BoundedVec::try_from(b"Cafe".to_vec()).unwrap();
+	let menu = BoundedVec::try_from(vec![sample_menu_item(b"Burger")]).unwrap();
+	assert_ok!(ProofOfExistence::create_restaurant(RuntimeOrigin::signed(2), venue, menu));
+	assert_ok!(ProofOfExistence::create_rider(RuntimeOrigin::signed(3)));
+	let lines = BoundedVec::try_from(vec![OrderLine { menu_index: 0, quantity: 2 }]).unwrap();
+	assert_ok!(ProofOfExistence::place_order(RuntimeOrigin::signed(1), 2, lines, hashed_pin));
+	assert_ok!(ProofOfExistence::advance_order_status(RuntimeOrigin::signed(2), 0));
+	assert_ok!(ProofOfExistence::advance_order_status(RuntimeOrigin::signed(2), 0));
+	assert_ok!(ProofOfExistence::claim_order_delivery(RuntimeOrigin::signed(3), 0));
+	assert_ok!(ProofOfExistence::confirm_delivery_pickup(RuntimeOrigin::signed(3), 0));
+	assert_eq!(Orders::<Test>::get(0).unwrap().status, OrderStatus::OnItsWay);
+	hashed_pin
+}
+
+fn pin_bv(pin: &[u8]) -> BoundedVec<u8, crate::MaxDeliveryPinLen> {
+	BoundedVec::try_from(pin.to_vec()).unwrap()
+}
+
+#[test]
+fn finish_order_delivery_happy_path_transfers_and_completes() {
+	new_test_ext().execute_with(|| {
+		System::set_block_number(1);
+		let _ = make_order_on_its_way(b"1234");
+
+		let pallet_account = ProofOfExistence::account_id();
+		let pallet_before = BalancesPallet::<Test>::free_balance(&pallet_account);
+		let restaurant_before = BalancesPallet::<Test>::free_balance(2);
+		let rider_before = BalancesPallet::<Test>::free_balance(3);
+
+		assert_ok!(ProofOfExistence::finish_order_delivery(
+			RuntimeOrigin::signed(3),
+			0,
+			pin_bv(b"1234"),
+		));
+
+		// Status is terminal and the held funds were split.
+		assert_eq!(Orders::<Test>::get(0).unwrap().status, OrderStatus::Completed);
+		let price = 200u128;
+		assert_eq!(
+			BalancesPallet::<Test>::free_balance(&pallet_account),
+			pallet_before - price - DELIVERY_FEE,
+		);
+		assert_eq!(BalancesPallet::<Test>::free_balance(2), restaurant_before + price);
+		assert_eq!(BalancesPallet::<Test>::free_balance(3), rider_before + DELIVERY_FEE);
+
+		System::assert_has_event(
+			crate::Event::OrderCompleted {
+				order_id: 0,
+				restaurant: 2,
+				rider: 3,
+				restaurant_amount: price,
+				rider_amount: DELIVERY_FEE,
+			}
+			.into(),
+		);
+		System::assert_has_event(
+			crate::Event::OrderStatusChanged { order_id: 0, status: OrderStatus::Completed }.into(),
+		);
+	});
+}
+
+#[test]
+fn finish_order_delivery_rejects_wrong_pin() {
+	new_test_ext().execute_with(|| {
+		let _ = make_order_on_its_way(b"1234");
+
+		let pallet_account = ProofOfExistence::account_id();
+		let pallet_before = BalancesPallet::<Test>::free_balance(&pallet_account);
+
+		assert_noop!(
+			ProofOfExistence::finish_order_delivery(RuntimeOrigin::signed(3), 0, pin_bv(b"9999"),),
+			Error::<Test>::InvalidDeliveryPin,
+		);
+		assert_eq!(Orders::<Test>::get(0).unwrap().status, OrderStatus::OnItsWay);
+		// No funds moved on the failed attempt.
+		assert_eq!(BalancesPallet::<Test>::free_balance(&pallet_account), pallet_before);
+	});
+}
+
+#[test]
+fn finish_order_delivery_only_assigned_rider() {
+	new_test_ext().execute_with(|| {
+		let _ = make_order_on_its_way(b"1234");
+		assert_ok!(ProofOfExistence::create_rider(RuntimeOrigin::signed(4)));
+		assert_noop!(
+			ProofOfExistence::finish_order_delivery(RuntimeOrigin::signed(4), 0, pin_bv(b"1234"),),
+			Error::<Test>::NotAssignedRider,
+		);
+	});
+}
+
+#[test]
+fn finish_order_delivery_requires_on_its_way() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(ProofOfExistence::create_customer(RuntimeOrigin::signed(1)));
+		let venue = BoundedVec::try_from(b"Cafe".to_vec()).unwrap();
+		let menu = BoundedVec::try_from(vec![sample_menu_item(b"Burger")]).unwrap();
+		assert_ok!(ProofOfExistence::create_restaurant(RuntimeOrigin::signed(2), venue, menu));
+		assert_ok!(ProofOfExistence::create_rider(RuntimeOrigin::signed(3)));
+		let lines = BoundedVec::try_from(vec![OrderLine { menu_index: 0, quantity: 1 }]).unwrap();
+		assert_ok!(ProofOfExistence::place_order(
+			RuntimeOrigin::signed(1),
+			2,
+			lines,
+			test_hash(77),
+		));
+		// Still `Created`: not even assigned, much less `OnItsWay`.
+		assert_noop!(
+			ProofOfExistence::finish_order_delivery(RuntimeOrigin::signed(3), 0, pin_bv(b"1234"),),
+			Error::<Test>::OrderNotOnItsWay,
+		);
+	});
+}
+
+#[test]
+fn finish_order_delivery_rejects_double_complete() {
+	new_test_ext().execute_with(|| {
+		let _ = make_order_on_its_way(b"1234");
+		assert_ok!(ProofOfExistence::finish_order_delivery(
+			RuntimeOrigin::signed(3),
+			0,
+			pin_bv(b"1234"),
+		));
+		// Second attempt must fail: status is now `Completed`, not `OnItsWay`.
+		assert_noop!(
+			ProofOfExistence::finish_order_delivery(RuntimeOrigin::signed(3), 0, pin_bv(b"1234"),),
+			Error::<Test>::OrderNotOnItsWay,
+		);
+	});
+}
+
+#[test]
+fn advance_order_status_rejects_after_completed() {
+	new_test_ext().execute_with(|| {
+		let _ = make_order_on_its_way(b"1234");
+		assert_ok!(ProofOfExistence::finish_order_delivery(
+			RuntimeOrigin::signed(3),
+			0,
+			pin_bv(b"1234"),
+		));
+		assert_noop!(
+			ProofOfExistence::advance_order_status(RuntimeOrigin::signed(2), 0),
+			Error::<Test>::OrderAlreadyCompleted,
+		);
+	});
+}

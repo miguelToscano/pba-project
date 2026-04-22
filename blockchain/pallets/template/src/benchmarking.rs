@@ -16,7 +16,7 @@ mod benchmarks {
 	#[cfg(test)]
 	use crate::pallet::Pallet as ProofOfExistence;
 	use frame_system::RawOrigin;
-	use scale_info::prelude::vec;
+	use scale_info::prelude::{vec, vec::Vec};
 
 	/// Fund the given account with enough native balance to place the benchmarked order.
 	/// Uses `set_balance` so we don't depend on a second pre-funded origin existing.
@@ -218,6 +218,59 @@ mod benchmarks {
 		confirm_delivery_pickup(RawOrigin::Signed(rider.clone()), 0u64);
 
 		assert_eq!(Orders::<T>::get(0u64).expect("order").status, OrderStatus::OnItsWay);
+	}
+
+	#[benchmark]
+	fn finish_order_delivery() {
+		use frame::deps::sp_core::hashing::blake2_256;
+		let customer: T::AccountId = account("customer", 0, 4);
+		let restaurant: T::AccountId = account("restaurant", 0, 4);
+		let rider: T::AccountId = account("rider", 0, 4);
+		let name = BoundedVec::<u8, ConstU32<128>>::try_from(b"Bench Cafe".to_vec()).unwrap();
+		let item = MenuItem {
+			name: BoundedVec::try_from(b"Dish".to_vec()).unwrap(),
+			description: BoundedVec::default(),
+			price: 1,
+		};
+		let menu = BoundedVec::<MenuItem, ConstU32<64>>::try_from(vec![item]).unwrap();
+		Customers::<T>::insert(&customer, Customer);
+		Restaurants::<T>::insert(&restaurant, Restaurant { name, menu });
+		Riders::<T>::insert(&rider, Rider);
+		fund::<T>(&customer);
+		let lines = BoundedVec::<OrderLine, MaxOrderLines>::try_from(vec![OrderLine {
+			menu_index: 0,
+			quantity: 1,
+		}])
+		.unwrap();
+
+		let pin_bytes: Vec<u8> = b"1234".to_vec();
+		let hashed_pin = H256::from(blake2_256(pin_bytes.as_slice()));
+		assert_ok!(Pallet::<T>::place_order(
+			RawOrigin::Signed(customer).into(),
+			restaurant.clone(),
+			lines,
+			hashed_pin,
+		));
+		assert_ok!(Pallet::<T>::advance_order_status(
+			RawOrigin::Signed(restaurant.clone()).into(),
+			0u64,
+		));
+		assert_ok!(Pallet::<T>::advance_order_status(RawOrigin::Signed(restaurant).into(), 0u64,));
+		assert_ok!(Pallet::<T>::claim_order_delivery(
+			RawOrigin::Signed(rider.clone()).into(),
+			0u64,
+		));
+		assert_ok!(Pallet::<T>::confirm_delivery_pickup(
+			RawOrigin::Signed(rider.clone()).into(),
+			0u64,
+		));
+
+		let pin: BoundedVec<u8, MaxDeliveryPinLen> = BoundedVec::try_from(pin_bytes).unwrap();
+
+		#[extrinsic_call]
+		finish_order_delivery(RawOrigin::Signed(rider.clone()), 0u64, pin);
+
+		assert_eq!(Orders::<T>::get(0u64).expect("order").status, OrderStatus::Completed);
 	}
 
 	impl_benchmark_test_suite!(ProofOfExistence, crate::mock::new_test_ext(), crate::mock::Test);

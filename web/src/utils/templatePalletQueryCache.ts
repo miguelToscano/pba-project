@@ -2,6 +2,7 @@ import type { QueryClient } from "@tanstack/react-query";
 import type { TxInclusionResult } from "./signAndSubmitBestBlock";
 import {
 	findLastEventPayloadByType,
+	parseOrderCompletedFromTxEvents,
 	parseOrderDeliveryClaimedFromTxEvents,
 	parseOrderPlacedFromTxEvents,
 	parseOrderStatusChangedFromTxEvents,
@@ -69,6 +70,34 @@ export function applyTemplatePalletTxToQueryCache(
 				exact: false,
 			});
 		}
+
+		// When a rider confirms pickup, the order moves to `OnItsWay` and now
+		// belongs in the rider's "My deliveries in progress" list. We don't
+		// have the full row payload from the event alone (customer/restaurant
+		// addresses aren't in `OrderStatusChanged`), so refetch that list.
+		if (
+			orderStatusVariant(statusChanged.status) === "OnItsWay" &&
+			walletAddress !== undefined
+		) {
+			void queryClient.invalidateQueries({
+				queryKey: ["riderMyActiveDeliveries", walletAddress, wsUrl],
+			});
+		}
+
+		// `Completed` is the terminal state reached by `finish_order_delivery`.
+		// The order should leave the rider's "My deliveries in progress" list;
+		// the customer / restaurant lists already get the status patched above
+		// (so their UI flips to "Completed" / "Delivered & paid" instantly).
+		// Refetch native balance too — the held payment was just split out to
+		// the restaurant and rider accounts.
+		if (
+			orderStatusVariant(statusChanged.status) === "Completed" &&
+			walletAddress !== undefined
+		) {
+			void queryClient.invalidateQueries({
+				queryKey: ["riderMyActiveDeliveries", walletAddress, wsUrl],
+			});
+		}
 	}
 
 	const deliveryClaimed = parseOrderDeliveryClaimedFromTxEvents(events);
@@ -106,6 +135,17 @@ export function applyTemplatePalletTxToQueryCache(
 		queryClient.setQueryData<ChatOrder>(chatKey, {
 			customer: prevChat?.customer ?? null,
 			rider: deliveryClaimed.rider,
+		});
+	}
+
+	const completed = parseOrderCompletedFromTxEvents(events);
+	if (completed) {
+		// The restaurant just received `price` from the pallet account; refresh
+		// its balance badge without waiting for the query's staleTime. The
+		// rider (signer) is covered by the generic signer balance invalidation
+		// further below.
+		void queryClient.invalidateQueries({
+			queryKey: ["accountBalance", completed.restaurant, wsUrl],
 		});
 	}
 

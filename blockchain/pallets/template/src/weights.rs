@@ -36,6 +36,7 @@ pub trait WeightInfo {
 	fn advance_order_status() -> Weight;
 	fn claim_order_delivery() -> Weight;
 	fn confirm_delivery_pickup() -> Weight;
+	fn finish_order_delivery() -> Weight;
 }
 
 /// Weights for pallet_template using the Substrate node and recommended hardware.
@@ -103,6 +104,14 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 			.saturating_add(T::DbWeight::get().reads(2_u64))
 			.saturating_add(T::DbWeight::get().writes(1_u64))
 	}
+
+	/// Storage: `TemplatePallet::Orders`, two native-balance transfers
+	/// (pallet → restaurant, pallet → rider).
+	fn finish_order_delivery() -> Weight {
+		Weight::from_parts(50_000_000, 1489)
+			.saturating_add(T::DbWeight::get().reads(4_u64))
+			.saturating_add(T::DbWeight::get().writes(4_u64))
+	}
 }
 
 /// For backwards compatibility and tests.
@@ -159,5 +168,11 @@ impl WeightInfo for () {
 		Weight::from_parts(20_000_000, 1489)
 			.saturating_add(RocksDbWeight::get().reads(2_u64))
 			.saturating_add(RocksDbWeight::get().writes(1_u64))
+	}
+
+	fn finish_order_delivery() -> Weight {
+		Weight::from_parts(50_000_000, 1489)
+			.saturating_add(RocksDbWeight::get().reads(4_u64))
+			.saturating_add(RocksDbWeight::get().writes(4_u64))
 	}
 }

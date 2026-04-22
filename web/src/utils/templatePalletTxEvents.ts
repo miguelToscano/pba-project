@@ -81,6 +81,25 @@ export function parseOrderPlacedFromTxEvents(events: unknown): {
 }
 
 /**
+ * Payload for the pallet's `OrderCompleted` event. Emitted by
+ * `finish_order_delivery` once the rider's PIN has been verified and the
+ * held payment has been split between the restaurant and the rider.
+ */
+export function parseOrderCompletedFromTxEvents(events: unknown): {
+	orderId: bigint;
+	restaurant: string;
+	rider: string;
+} | null {
+	const v = findLastEventPayloadByType(events, "OrderCompleted");
+	if (!v) return null;
+	const orderId = toOrderId(v.order_id);
+	const restaurant = typeof v.restaurant === "string" ? v.restaurant : null;
+	const rider = typeof v.rider === "string" ? v.rider : null;
+	if (orderId === null || !restaurant || !rider) return null;
+	return { orderId, restaurant, rider };
+}
+
+/**
  * Payload for the pallet's `OrderDeliveryClaimed { order_id, rider }` event,
  * extracted from a tx inclusion result.
  */

@@ -30,6 +30,7 @@ import {
 } from "../utils/deliveryPin";
 import { signAndSubmitAwaitBestBlock } from "../utils/signAndSubmitBestBlock";
 import { applyTemplatePalletTxToQueryCache } from "../utils/templatePalletQueryCache";
+import FinishDeliveryModal from "./FinishDeliveryModal";
 import { parseOrderPlacedFromTxEvents, toOrderId } from "../utils/templatePalletTxEvents";
 
 type RoleTab = "customer" | "restaurant" | "rider";
@@ -210,7 +211,9 @@ function RiderReadyPickupOrders({ isRider }: { isRider: boolean | null }) {
 	// `confirm_delivery_pickup`, which moves `ReadyForPickup → OnItsWay`.
 	// After the event-driven cache patch runs, the row leaves this list
 	// and the restaurant/customer views flip to "On its way" without a
-	// storage round-trip.
+	// storage round-trip. We then open a chat window to the customer and
+	// queue an "I'm on my way!" message so the customer is notified without
+	// the rider having to type anything.
 	const markOnItsWayMut = useMutation({
 		mutationFn: async (orderId: bigint) => {
 			if (!walletSigner) throw new Error("Connect a wallet and approve signing.");
@@ -220,16 +223,17 @@ function RiderReadyPickupOrders({ isRider }: { isRider: boolean | null }) {
 			if (!result.ok) {
 				throw new Error(formatDispatchError(result.dispatchError));
 			}
-			return result;
+			return { result, orderId };
 		},
 		onMutate: () => {
 			setClaimMsg(null);
 		},
-		onSuccess: (result) => {
+		onSuccess: ({ result, orderId }) => {
 			applyTemplatePalletTxToQueryCache(
 				{ queryClient, wsUrl, walletAddress: address ?? undefined },
 				result,
 			);
+			openChat(orderId, "I'm on my way!");
 		},
 		onError: (e) => {
 			setClaimMsg(e instanceof Error ? e.message : String(e));
@@ -310,31 +314,22 @@ function RiderReadyPickupOrders({ isRider }: { isRider: boolean | null }) {
 									<td className="py-3 px-3 whitespace-nowrap">
 										{row.assignedRider ? (
 											sameAccount(row.assignedRider, address) ? (
-												<div className="flex flex-wrap items-center gap-1.5">
-													<button
-														type="button"
-														disabled={
-															markOnItsWayMut.isPending &&
-															markOnItsWayMut.variables === row.id
-														}
-														onClick={() =>
-															void markOnItsWayMut.mutateAsync(row.id)
-														}
-														className="btn-primary text-xs px-2.5 py-1 disabled:opacity-40 disabled:cursor-not-allowed"
-													>
-														{markOnItsWayMut.isPending &&
+												<button
+													type="button"
+													disabled={
+														markOnItsWayMut.isPending &&
 														markOnItsWayMut.variables === row.id
-															? "Signing…"
-															: "Mark on its way"}
-													</button>
-													<button
-														type="button"
-														onClick={() => openChat(row.id)}
-														className="btn-secondary text-xs px-2.5 py-1"
-													>
-														Chat
-													</button>
-												</div>
+													}
+													onClick={() =>
+														void markOnItsWayMut.mutateAsync(row.id)
+													}
+													className="btn-primary text-xs px-2.5 py-1 disabled:opacity-40 disabled:cursor-not-allowed"
+												>
+													{markOnItsWayMut.isPending &&
+													markOnItsWayMut.variables === row.id
+														? "Signing…"
+														: "Mark on its way"}
+												</button>
 											) : (
 												<span className="text-xs text-text-tertiary">
 													Claimed
@@ -359,6 +354,221 @@ function RiderReadyPickupOrders({ isRider }: { isRider: boolean | null }) {
 					</table>
 				</div>
 			)}
+		</div>
+	);
+}
+
+/**
+ * Second rider section: orders in `OnItsWay` assigned to the connected rider.
+ * Lives separately from the "Available Orders" list because those only show
+ * `ReadyForPickup` — after the rider hits "Mark on its way" the order moves
+ * here, which is also the only place the rider sees the Chat affordance
+ * (per product: Chat only appears when status is `OnItsWay`).
+ */
+function RiderMyDeliveriesInProgress() {
+	const { address } = useAccount();
+	const connected = useChainStore((s) => s.connected);
+	const wsUrl = useChainStore((s) => s.wsUrl);
+	const templatePallet = useChainStore((s) => s.pallets.templatePallet);
+	const openChat = useChatDockStore((s) => s.openChat);
+	const queryClient = useQueryClient();
+	const { data: walletSigner } = usePapiSigner();
+
+	// Which row (if any) has the Finish-delivery modal open. We track both
+	// `orderId` and `customer` so the modal can show who's expecting the
+	// delivery without re-reading the orders query.
+	const [finishTarget, setFinishTarget] = useState<{
+		orderId: bigint;
+		customer: string;
+	} | null>(null);
+	// Last `finish_order_delivery` error to surface inside the modal (e.g.
+	// `InvalidDeliveryPin` from the dispatch). Cleared when the modal closes
+	// or a new attempt starts.
+	const [finishError, setFinishError] = useState<string | null>(null);
+
+	const query = useQuery({
+		queryKey: ["riderMyActiveDeliveries", address, wsUrl],
+		queryFn: async () => {
+			const api = getClient(wsUrl).getTypedApi(stack_template);
+			const nextRaw = await api.query.TemplatePallet.NextOrderId.getValue();
+			const nextId = toOrderId(nextRaw);
+			if (nextId === null || nextId === 0n) return [];
+
+			type Row = {
+				id: bigint;
+				customer: string;
+				restaurant: string;
+			};
+			const rows: Row[] = [];
+			for (let id = 0n; id < nextId; id += 1n) {
+				const order = await api.query.TemplatePallet.Orders.getValue(id);
+				if (!order) continue;
+				const o = order as {
+					customer?: unknown;
+					restaurant?: unknown;
+					status?: unknown;
+					assigned_rider?: unknown;
+				};
+				if (orderStatusVariant(o.status) !== "OnItsWay") continue;
+				const rider = optionalSs58Account(o.assigned_rider);
+				if (!rider || !sameAccount(rider, address)) continue;
+				const customer = typeof o.customer === "string" ? o.customer : null;
+				const restaurant = typeof o.restaurant === "string" ? o.restaurant : null;
+				if (!customer || !restaurant) continue;
+				rows.push({ id, customer, restaurant });
+			}
+			rows.sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+			return rows;
+		},
+		enabled: Boolean(address && connected && templatePallet === true),
+		staleTime: 10_000,
+	});
+
+	// Rider finalises delivery by presenting the plaintext PIN the customer
+	// shared at handoff. The pallet hashes it and compares to `hashed_pin`
+	// it recorded at `place_order`. On success the held funds are split
+	// restaurant/rider and the order enters `Completed`.
+	const finishMut = useMutation({
+		mutationFn: async ({ orderId, pin }: { orderId: bigint; pin: string }) => {
+			if (!walletSigner) throw new Error("Connect a wallet and approve signing.");
+			const trimmed = pin.trim();
+			if (trimmed.length === 0) throw new Error("Enter the customer's delivery PIN.");
+			const pinBytes = new TextEncoder().encode(trimmed);
+			if (pinBytes.length > 16) {
+				throw new Error("PIN is too long (max 16 bytes).");
+			}
+			const api = getClient(wsUrl).getTypedApi(stack_template);
+			const tx = api.tx.TemplatePallet.finish_order_delivery({
+				order_id: orderId,
+				pin: Binary.fromBytes(pinBytes),
+			});
+			const result = await signAndSubmitAwaitBestBlock(tx, walletSigner);
+			if (!result.ok) {
+				throw new Error(formatDispatchError(result.dispatchError));
+			}
+			return { result, orderId };
+		},
+		onMutate: () => {
+			setFinishError(null);
+		},
+		onSuccess: ({ result }) => {
+			applyTemplatePalletTxToQueryCache(
+				{ queryClient, wsUrl, walletAddress: address ?? undefined },
+				result,
+			);
+			// Dismiss the modal only on success: on failure we keep it open so
+			// the rider can correct the PIN and retry without re-opening.
+			setFinishTarget(null);
+		},
+		onError: (e) => {
+			setFinishError(e instanceof Error ? e.message : String(e));
+		},
+	});
+
+	if (!address) return null;
+	if (query.isSuccess && query.data.length === 0) return null;
+
+	const canSubmit = Boolean(walletSigner);
+
+	return (
+		<div className="space-y-3">
+			<GradientSectionTitle>My deliveries in progress</GradientSectionTitle>
+			<p className="text-xs text-text-tertiary mb-2 text-center">
+				Orders you&apos;ve marked{" "}
+				<span className="font-medium text-text-secondary">On its way</span>. Tap{" "}
+				<span className="font-medium text-text-secondary">Finish delivery</span> at handoff
+				to enter the customer&apos;s PIN and release payment.
+			</p>
+			{query.isPending && (
+				<div className="mx-auto w-full rounded-lg border border-white/[0.06] p-6 animate-pulse h-20" />
+			)}
+			{query.isError && (
+				<p className="text-sm text-accent-red text-center">
+					{query.error instanceof Error
+						? query.error.message
+						: "Could not load your deliveries."}
+				</p>
+			)}
+			{query.isSuccess && query.data.length > 0 && (
+				<div className="overflow-x-auto rounded-lg border border-white/[0.06]">
+					<table className="w-full text-left text-sm border-collapse">
+						<thead>
+							<tr className="border-b border-white/[0.1] bg-white/[0.02] text-text-tertiary text-xs uppercase tracking-wider">
+								<th className="py-2.5 px-3 font-medium">Order</th>
+								<th className="py-2.5 px-3 font-medium">Customer</th>
+								<th className="py-2.5 px-3 font-medium">Restaurant</th>
+								<th className="py-2.5 px-3 font-medium">Status</th>
+								<th className="py-2.5 px-3 font-medium">Action</th>
+							</tr>
+						</thead>
+						<tbody>
+							{query.data.map((row) => (
+								<tr
+									key={row.id.toString()}
+									className="border-b border-white/[0.06] text-text-primary last:border-0"
+								>
+									<td className="py-3 px-3 font-mono text-xs text-text-secondary">
+										#{row.id.toString()}
+									</td>
+									<td className="py-3 px-3 font-mono text-xs">
+										{shortAddress(row.customer)}
+									</td>
+									<td className="py-3 px-3 font-mono text-xs">
+										{shortAddress(row.restaurant)}
+									</td>
+									<td className="py-3 px-3">
+										<span className="inline-flex shrink-0 items-center rounded-md bg-gradient-to-r from-polka-400 to-polka-600 px-2 py-0.5 text-[0.6875rem] font-semibold leading-none text-white shadow-sm">
+											On its way
+										</span>
+									</td>
+									<td className="py-3 px-3 whitespace-nowrap">
+										<div className="flex flex-wrap items-center gap-1.5">
+											<button
+												type="button"
+												disabled={!canSubmit}
+												onClick={() => {
+													setFinishError(null);
+													setFinishTarget({
+														orderId: row.id,
+														customer: row.customer,
+													});
+												}}
+												className="btn-primary text-xs px-2.5 py-1 disabled:opacity-40 disabled:cursor-not-allowed"
+											>
+												Finish delivery
+											</button>
+											<button
+												type="button"
+												onClick={() => openChat(row.id)}
+												className="btn-secondary text-xs px-2.5 py-1"
+											>
+												Chat
+											</button>
+										</div>
+									</td>
+								</tr>
+							))}
+						</tbody>
+					</table>
+				</div>
+			)}
+
+			<FinishDeliveryModal
+				open={finishTarget !== null}
+				orderId={finishTarget?.orderId ?? null}
+				customer={finishTarget?.customer ?? null}
+				isSubmitting={finishMut.isPending}
+				submitError={finishError}
+				onClose={() => {
+					if (finishMut.isPending) return;
+					setFinishTarget(null);
+					setFinishError(null);
+				}}
+				onConfirm={async (pin) => {
+					if (!finishTarget) return;
+					await finishMut.mutateAsync({ orderId: finishTarget.orderId, pin });
+				}}
+			/>
 		</div>
 	);
 }
@@ -425,7 +635,12 @@ export default function HomeRolePanel({
 
 			{activeTab === "restaurant" && <RestaurantTabs />}
 
-			{activeTab === "rider" && <RiderReadyPickupOrders isRider={isRider} />}
+			{activeTab === "rider" && (
+				<div className="space-y-6">
+					<RiderReadyPickupOrders isRider={isRider} />
+					<RiderMyDeliveriesInProgress />
+				</div>
+			)}
 		</div>
 	);
 }

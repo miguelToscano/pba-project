@@ -20,10 +20,10 @@ var metadataTypes = import("./metadataTypes-CODXA4PL.mjs").then(
 );
 var asset = {};
 var extensions = {};
-var getMetadata = () => import("./stack_template_metadata-VF5KSFGU.mjs").then(
+var getMetadata = () => import("./stack_template_metadata-HSFLDQ7Y.mjs").then(
   (module) => toBinary("default" in module ? module.default : module)
 );
-var genesis = "0x4545454545454545454545454545454545454545454545454545454545454545";
+var genesis = "0xeb6d3dabb9edbfd23440ad7ea328da6d577ecc421aa5cabd625fdb80f218d5e6";
 var _allDescriptors = { descriptors: descriptorValues, metadataTypes, asset, extensions, getMetadata, genesis };
 var stack_template_default = _allDescriptors;
 

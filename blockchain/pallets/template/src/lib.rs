@@ -32,7 +32,7 @@ mod benchmarking;
 pub mod pallet {
 	use crate::weights::WeightInfo;
 	use frame::{
-		deps::frame_support::PalletId,
+		deps::{frame_support::PalletId, sp_core::hashing::blake2_256},
 		prelude::*,
 		traits::{
 			tokens::{
@@ -131,6 +131,11 @@ pub mod pallet {
 	/// Maximum order ids kept per customer or per restaurant index list.
 	pub type MaxOrderQueue = ConstU32<256>;
 
+	/// Maximum byte length of a plaintext delivery PIN accepted by
+	/// [`Call::finish_order_delivery`]. 16 bytes is generous for any
+	/// reasonable human-entered PIN (the default client generates 4 digits).
+	pub type MaxDeliveryPinLen = ConstU32<16>;
+
 	/// Lifecycle of an order (restaurant advances until terminal).
 	#[derive(
 		Encode,
@@ -153,8 +158,14 @@ pub mod pallet {
 		InProgress,
 		/// Ready for customer pickup or rider handoff.
 		ReadyForPickup,
-		/// Out for delivery (terminal — no further transitions).
+		/// Out for delivery.
 		OnItsWay,
+		/// Delivered by the rider and verified with the customer's PIN.
+		///
+		/// Terminal: at this point the held payment has already been split
+		/// (`price` to the restaurant, `delivery_fee` to the rider) and no
+		/// further status transitions are allowed.
+		Completed,
 	}
 
 	/// One line in an order: index into the restaurant's on-chain menu and quantity.
@@ -306,6 +317,16 @@ pub mod pallet {
 		/// A customer paid for an order. `amount` is `price + delivery_fee`, transferred
 		/// to the pallet-owned account and held there until settlement.
 		OrderPaid { order_id: OrderId, customer: T::AccountId, amount: u128 },
+		/// Delivery was completed and verified with the customer's PIN. The
+		/// held payment was split: `price` went to the restaurant, `delivery_fee`
+		/// to the rider.
+		OrderCompleted {
+			order_id: OrderId,
+			restaurant: T::AccountId,
+			rider: T::AccountId,
+			restaurant_amount: u128,
+			rider_amount: u128,
+		},
 	}
 
 	/// Errors that can occur in this pallet.
@@ -355,6 +376,10 @@ pub mod pallet {
 		OrderQueueFull,
 		/// Arithmetic overflow while computing an order's total price.
 		PriceOverflow,
+		/// Tried to finish a delivery on an order that is not `OnItsWay`.
+		OrderNotOnItsWay,
+		/// Plaintext PIN provided does not match the hash recorded for this order.
+		InvalidDeliveryPin,
 	}
 
 	/// Dispatchable calls.
@@ -514,7 +539,12 @@ pub mod pallet {
 				OrderStatus::ReadyForPickup => {
 					return Err(Error::<T>::OrderAwaitingRiderPickup.into())
 				},
-				OrderStatus::OnItsWay => return Err(Error::<T>::OrderAlreadyCompleted.into()),
+				// `OnItsWay` is advanced by the rider via `finish_order_delivery`,
+				// not by the restaurant. Both `OnItsWay` and `Completed` are
+				// dead-ends for this call.
+				OrderStatus::OnItsWay | OrderStatus::Completed => {
+					return Err(Error::<T>::OrderAlreadyCompleted.into())
+				},
 			};
 			order.status = next;
 			Orders::<T>::insert(order_id, order);
@@ -563,6 +593,80 @@ pub mod pallet {
 			Self::deposit_event(Event::OrderStatusChanged {
 				order_id,
 				status: OrderStatus::OnItsWay,
+			});
+			Ok(())
+		}
+
+		/// Finish a delivery by verifying the 4-digit PIN the customer shares
+		/// with the rider at handoff. Only the assigned rider of an `OnItsWay`
+		/// order can call this, and the plaintext `pin` must hash (Blake2-256
+		/// of its raw bytes) to the `hashed_pin` the customer committed to
+		/// when placing the order.
+		///
+		/// On success:
+		/// - The order moves to the terminal `Completed` status.
+		/// - The pallet-owned account (holding `price + delivery_fee` since `place_order`) pays
+		///   `price` to the restaurant and `delivery_fee` to the rider. Both transfers use
+		///   `Preservation::Expendable` so the pallet account isn't required to stay above its
+		///   existential deposit — the held funds belong to the participants.
+		#[pallet::call_index(9)]
+		#[pallet::weight(T::WeightInfo::finish_order_delivery())]
+		pub fn finish_order_delivery(
+			origin: OriginFor<T>,
+			order_id: OrderId,
+			pin: BoundedVec<u8, MaxDeliveryPinLen>,
+		) -> DispatchResult {
+			let who = ensure_signed(origin)?;
+
+			let mut order = Orders::<T>::get(order_id).ok_or(Error::<T>::UnknownOrder)?;
+			ensure!(order.status == OrderStatus::OnItsWay, Error::<T>::OrderNotOnItsWay);
+			ensure!(order.assigned_rider.as_ref() == Some(&who), Error::<T>::NotAssignedRider);
+
+			// Compare hashes (not plaintexts): the pallet never sees the raw
+			// PIN before this call and still won't store it — only the digest
+			// is checked against the commitment recorded at `place_order`.
+			let provided_hash = H256::from(blake2_256(pin.as_slice()));
+			ensure!(provided_hash == order.hashed_pin, Error::<T>::InvalidDeliveryPin);
+
+			let pallet_account = Self::account_id();
+			let restaurant_amount = order.price;
+			let rider_amount = order.delivery_fee;
+
+			// Settle held funds. `Expendable` is appropriate: these funds were
+			// deposited by the customer specifically to be paid out on delivery,
+			// and the pallet account may legitimately go to zero if this is the
+			// only pending order.
+			if restaurant_amount > 0 {
+				T::NativeBalance::transfer(
+					&pallet_account,
+					&order.restaurant,
+					restaurant_amount,
+					Preservation::Expendable,
+				)?;
+			}
+			if rider_amount > 0 {
+				T::NativeBalance::transfer(
+					&pallet_account,
+					&who,
+					rider_amount,
+					Preservation::Expendable,
+				)?;
+			}
+
+			let restaurant_account = order.restaurant.clone();
+			order.status = OrderStatus::Completed;
+			Orders::<T>::insert(order_id, order);
+
+			Self::deposit_event(Event::OrderStatusChanged {
+				order_id,
+				status: OrderStatus::Completed,
+			});
+			Self::deposit_event(Event::OrderCompleted {
+				order_id,
+				restaurant: restaurant_account,
+				rider: who,
+				restaurant_amount,
+				rider_amount,
 			});
 			Ok(())
 		}

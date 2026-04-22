@@ -57,6 +57,12 @@ export default function ChatWindow({ orderId, minimized }: ChatWindowProps) {
 
 	const closeChat = useChatDockStore((s) => s.closeChat);
 	const toggleMinimized = useChatDockStore((s) => s.toggleMinimized);
+	const pendingOutgoingMessage = useChatDockStore(
+		(s) =>
+			s.entries.find((e) => e.orderId.toString() === orderId.toString())
+				?.pendingOutgoingMessage ?? null,
+	);
+	const clearPendingOutgoingMessage = useChatDockStore((s) => s.clearPendingOutgoingMessage);
 
 	const orderQuery = useQuery({
 		queryKey: ["chatOrder", wsUrl, orderId.toString()],
@@ -103,6 +109,40 @@ export default function ChatWindow({ orderId, minimized }: ChatWindowProps) {
 			scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
 		}
 	}, [chat.messages.length, minimized]);
+
+	// Auto-send a queued message (used when the rider's "Mark on its way"
+	// flow opens the chat with an initial "I'm on my way!" line): if chat is
+	// already enabled, send immediately; otherwise kick off the one-time
+	// delegation signature and let this effect re-run when `chat.ready` flips.
+	// `autoEnableTriedRef` guards against re-invoking `enableChat` across
+	// re-renders while the wallet popup is still open.
+	const autoEnableTriedRef = useRef<string | null>(null);
+	useEffect(() => {
+		if (!pendingOutgoingMessage || !iAmParticipant) return;
+		if (chat.statementStoreAvailable !== true) return;
+		if (chat.sending) return;
+
+		if (chat.ready) {
+			void chat.sendMessage(pendingOutgoingMessage).then(() => {
+				clearPendingOutgoingMessage(orderId);
+			});
+			return;
+		}
+
+		if (!walletSigner || chat.enabling) return;
+		const key = `${wsUrl}:${orderId.toString()}:${pendingOutgoingMessage}`;
+		if (autoEnableTriedRef.current === key) return;
+		autoEnableTriedRef.current = key;
+		void chat.enableChat();
+	}, [
+		pendingOutgoingMessage,
+		iAmParticipant,
+		chat,
+		clearPendingOutgoingMessage,
+		orderId,
+		walletSigner,
+		wsUrl,
+	]);
 
 	const otherPartyAddress = amCustomer ? allowedParticipants.rider : allowedParticipants.customer;
 	const otherRoleLabel = amCustomer ? "Rider" : "Customer";
