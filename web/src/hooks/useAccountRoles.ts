@@ -20,9 +20,9 @@ export function useAccountRoles() {
 		queryFn: async () => {
 			const api = getClient(wsUrl).getTypedApi(stack_template);
 			const [c, r, rider] = await Promise.all([
-				api.query.TemplatePallet.Customers.getValue(address!),
-				api.query.TemplatePallet.Restaurants.getValue(address!),
-				api.query.TemplatePallet.Riders.getValue(address!),
+				api.query.TemplatePallet.Customers.getValue(address!, { at: "best" }),
+				api.query.TemplatePallet.Restaurants.getValue(address!, { at: "best" }),
+				api.query.TemplatePallet.Riders.getValue(address!, { at: "best" }),
 			]);
 			return {
 				isCustomer: c !== undefined,

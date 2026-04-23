@@ -145,7 +145,7 @@ function RiderReadyPickupOrders({ isRider }: { isRider: boolean | null }) {
 		queryKey: ["riderReadyPickupOrders", wsUrl],
 		queryFn: async () => {
 			const api = getClient(wsUrl).getTypedApi(stack_template);
-			const nextRaw = await api.query.TemplatePallet.NextOrderId.getValue();
+			const nextRaw = await api.query.TemplatePallet.NextOrderId.getValue({ at: "best" });
 			const nextId = toOrderId(nextRaw);
 			if (nextId === null || nextId === 0n) return [];
 
@@ -157,7 +157,7 @@ function RiderReadyPickupOrders({ isRider }: { isRider: boolean | null }) {
 			};
 			const rows: Row[] = [];
 			for (let id = 0n; id < nextId; id += 1n) {
-				const order = await api.query.TemplatePallet.Orders.getValue(id);
+				const order = await api.query.TemplatePallet.Orders.getValue(id, { at: "best" });
 				if (!order) continue;
 				const o = order as {
 					customer?: unknown;
@@ -403,7 +403,7 @@ function RiderMyDeliveriesInProgress() {
 		queryKey: ["riderMyActiveDeliveries", address, wsUrl],
 		queryFn: async () => {
 			const api = getClient(wsUrl).getTypedApi(stack_template);
-			const nextRaw = await api.query.TemplatePallet.NextOrderId.getValue();
+			const nextRaw = await api.query.TemplatePallet.NextOrderId.getValue({ at: "best" });
 			const nextId = toOrderId(nextRaw);
 			if (nextId === null || nextId === 0n) return [];
 
@@ -414,7 +414,7 @@ function RiderMyDeliveriesInProgress() {
 			};
 			const rows: Row[] = [];
 			for (let id = 0n; id < nextId; id += 1n) {
-				const order = await api.query.TemplatePallet.Orders.getValue(id);
+				const order = await api.query.TemplatePallet.Orders.getValue(id, { at: "best" });
 				if (!order) continue;
 				const o = order as {
 					customer?: unknown;
@@ -789,7 +789,7 @@ function CustomerRestaurantsBrowse({ isCustomer }: { isCustomer: boolean | null 
 		queryKey: ["customerRestaurantsList", wsUrl],
 		queryFn: async () => {
 			const api = getClient(wsUrl).getTypedApi(stack_template);
-			return api.query.TemplatePallet.Restaurants.getEntries();
+			return api.query.TemplatePallet.Restaurants.getEntries({ at: "best" });
 		},
 		enabled: Boolean(connected && templatePallet === true),
 		staleTime: 15_000,
@@ -919,10 +919,12 @@ function CustomerMyOrders() {
 		queryKey: ["customerMyOrders", address, wsUrl],
 		queryFn: async () => {
 			const api = getClient(wsUrl).getTypedApi(stack_template);
-			const ids = await api.query.TemplatePallet.CustomerOrders.getValue(address!);
+			const ids = await api.query.TemplatePallet.CustomerOrders.getValue(address!, {
+				at: "best",
+			});
 			if (!ids?.length) return [];
 			const orders = await Promise.all(
-				ids.map((id) => api.query.TemplatePallet.Orders.getValue(id)),
+				ids.map((id) => api.query.TemplatePallet.Orders.getValue(id, { at: "best" })),
 			);
 			const base = ids.map((id, i) => ({ id, order: orders[i] }));
 			const restaurantAddrs = new Set<string>();
@@ -932,7 +934,9 @@ function CustomerMyOrders() {
 			}
 			const menuEntries = await Promise.all(
 				[...restaurantAddrs].map(async (restaurant) => {
-					const raw = await api.query.TemplatePallet.Restaurants.getValue(restaurant);
+					const raw = await api.query.TemplatePallet.Restaurants.getValue(restaurant, {
+						at: "best",
+					});
 					return [restaurant, parseRestaurantValue(raw).menu] as const;
 				}),
 			);
@@ -1219,7 +1223,7 @@ function RestaurantOrdersPanel() {
 		queryKey: ["homeRestaurantProfile", address, wsUrl],
 		queryFn: async () => {
 			const api = getClient(wsUrl).getTypedApi(stack_template);
-			return api.query.TemplatePallet.Restaurants.getValue(address!);
+			return api.query.TemplatePallet.Restaurants.getValue(address!, { at: "best" });
 		},
 		enabled: Boolean(address && connected && templatePallet === true),
 		staleTime: 15_000,
@@ -1235,10 +1239,12 @@ function RestaurantOrdersPanel() {
 		queryKey: ["restaurantOrders", address, wsUrl],
 		queryFn: async () => {
 			const api = getClient(wsUrl).getTypedApi(stack_template);
-			const ids = await api.query.TemplatePallet.RestaurantOrders.getValue(address!);
+			const ids = await api.query.TemplatePallet.RestaurantOrders.getValue(address!, {
+				at: "best",
+			});
 			if (!ids?.length) return [];
 			const orders = await Promise.all(
-				ids.map((id) => api.query.TemplatePallet.Orders.getValue(id)),
+				ids.map((id) => api.query.TemplatePallet.Orders.getValue(id, { at: "best" })),
 			);
 			return ids.map((id, i) => ({ id, order: orders[i] }));
 		},
@@ -1902,7 +1908,7 @@ function RestaurantOnChainMenu() {
 		queryKey: ["homeRestaurantProfile", address, wsUrl],
 		queryFn: async () => {
 			const api = getClient(wsUrl).getTypedApi(stack_template);
-			return api.query.TemplatePallet.Restaurants.getValue(address!);
+			return api.query.TemplatePallet.Restaurants.getValue(address!, { at: "best" });
 		},
 		enabled: Boolean(address && connected && templatePallet === true),
 		staleTime: 15_000,

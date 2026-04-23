@@ -22,7 +22,7 @@ export function useAccountBalance() {
 		queryKey: ["accountBalance", address, wsUrl],
 		queryFn: async () => {
 			const api = getClient(wsUrl).getTypedApi(stack_template);
-			const info = await api.query.System.Account.getValue(address!);
+			const info = await api.query.System.Account.getValue(address!, { at: "best" });
 			return {
 				free: info.data.free as bigint,
 				reserved: info.data.reserved as bigint,
