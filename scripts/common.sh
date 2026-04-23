@@ -464,6 +464,7 @@ generate_chain_spec() {
         -t development \
         --relay-chain rococo-local \
         --para-id 1000 \
+        --properties "tokenSymbol=UNIT,tokenDecimals=1" \
         --runtime "$RUNTIME_WASM" \
         named-preset development
 }

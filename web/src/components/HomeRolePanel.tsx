@@ -983,8 +983,23 @@ function CustomerMyOrders() {
 							restaurant?: string;
 							lines?: unknown;
 							status?: unknown;
+							delivery_fee?: unknown;
 						};
-						const { lines: lineDetails, total } = orderLinesWithPricing(o.lines, menu);
+						const { lines: lineDetails, total: itemsSubtotal } = orderLinesWithPricing(
+							o.lines,
+							menu,
+						);
+						// `delivery_fee` is snapshotted into the Order at `place_order`
+						// time (u128). Prefer the per-order value so historical orders
+						// keep showing the fee they actually paid even if the runtime
+						// constant changes later.
+						const deliveryFee =
+							typeof o.delivery_fee === "bigint"
+								? o.delivery_fee
+								: typeof o.delivery_fee === "number"
+									? BigInt(o.delivery_fee)
+									: 0n;
+						const grandTotal = itemsSubtotal + deliveryFee;
 						const orderIdBig = toOrderId(id);
 						// Only show the delivery PIN while it's still actionable for the
 						// customer: once the restaurant flags the order "Ready for pickup"
@@ -1099,13 +1114,29 @@ function CustomerMyOrders() {
 											</div>
 										))}
 										<div
-											className="flex items-center justify-between gap-3 pt-2 border-t text-sm font-semibold"
+											className="pt-2 border-t space-y-1"
 											style={{ borderColor: "rgba(255,255,255,0.07)" }}
 										>
-											<span className="text-text-secondary">Total</span>
-											<span className="font-mono text-text-primary">
-												{formatMenuPriceUnits(total)}
-											</span>
+											<div className="flex items-center justify-between gap-3 text-xs">
+												<span className="text-text-tertiary">Subtotal</span>
+												<span className="font-mono text-text-secondary">
+													{formatMenuPriceUnits(itemsSubtotal)}
+												</span>
+											</div>
+											<div className="flex items-center justify-between gap-3 text-xs">
+												<span className="text-text-tertiary">
+													Delivery fee
+												</span>
+												<span className="font-mono text-text-secondary">
+													{formatMenuPriceUnits(deliveryFee)}
+												</span>
+											</div>
+											<div className="flex items-center justify-between gap-3 text-sm font-semibold">
+												<span className="text-text-secondary">Total</span>
+												<span className="font-mono text-text-primary">
+													{formatMenuPriceUnits(grandTotal)}
+												</span>
+											</div>
 										</div>
 									</div>
 								)}
