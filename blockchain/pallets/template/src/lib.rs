@@ -350,6 +350,8 @@ pub mod pallet {
 		NotRegisteredCustomer,
 		/// Caller must be registered as a rider to claim or start a delivery.
 		NotRegisteredRider,
+		/// Caller must be registered as a restaurant to advance an order's status.
+		NotRegisteredRestaurant,
 		/// Target account has no restaurant record.
 		UnknownRestaurant,
 		/// Menu index is out of range for that restaurant's menu.
@@ -527,66 +529,120 @@ pub mod pallet {
 
 		/// Advance this order to the next status (restaurant operator only).
 		/// [`OrderStatus::OnItsWay`] is terminal.
+		///
+		/// ### Fees
+		///
+		/// Fee-less for registered restaurants (success or error), so pushing
+		/// kitchen-state transitions through this call isn't a cost center.
+		/// Non-restaurants are rejected up-front with `NotRegisteredRestaurant`
+		/// and pay the normal fee (DoS resistance).
 		#[pallet::call_index(6)]
 		#[pallet::weight(T::WeightInfo::advance_order_status())]
-		pub fn advance_order_status(origin: OriginFor<T>, order_id: OrderId) -> DispatchResult {
+		pub fn advance_order_status(
+			origin: OriginFor<T>,
+			order_id: OrderId,
+		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
-			let mut order = Orders::<T>::get(order_id).ok_or(Error::<T>::UnknownOrder)?;
-			ensure!(order.restaurant == who, Error::<T>::NotOrderRestaurant);
+
+			// Fee waiver gate: only registered restaurants get `Pays::No`.
+			ensure!(Restaurants::<T>::contains_key(&who), Error::<T>::NotRegisteredRestaurant);
+
+			let restaurant_free = |error: DispatchError| DispatchErrorWithPostInfo {
+				post_info: PostDispatchInfo { actual_weight: None, pays_fee: Pays::No },
+				error,
+			};
+
+			let mut order = Orders::<T>::get(order_id)
+				.ok_or_else(|| restaurant_free(Error::<T>::UnknownOrder.into()))?;
+			if order.restaurant != who {
+				return Err(restaurant_free(Error::<T>::NotOrderRestaurant.into()));
+			}
 			let next = match order.status {
 				OrderStatus::Created => OrderStatus::InProgress,
 				OrderStatus::InProgress => OrderStatus::ReadyForPickup,
 				OrderStatus::ReadyForPickup => {
-					return Err(Error::<T>::OrderAwaitingRiderPickup.into())
+					return Err(restaurant_free(Error::<T>::OrderAwaitingRiderPickup.into()))
 				},
 				// `OnItsWay` is advanced by the rider via `finish_order_delivery`,
 				// not by the restaurant. Both `OnItsWay` and `Completed` are
 				// dead-ends for this call.
 				OrderStatus::OnItsWay | OrderStatus::Completed => {
-					return Err(Error::<T>::OrderAlreadyCompleted.into())
+					return Err(restaurant_free(Error::<T>::OrderAlreadyCompleted.into()))
 				},
 			};
 			order.status = next;
 			Orders::<T>::insert(order_id, order);
 			Self::deposit_event(Event::OrderStatusChanged { order_id, status: next });
-			Ok(())
+			Ok(PostDispatchInfo { actual_weight: None, pays_fee: Pays::No }.into())
 		}
 
 		/// Claim an order for delivery as a rider. Only `ReadyForPickup` orders may be claimed.
+		///
+		/// ### Fees
+		///
+		/// Fee-less for registered riders (success or error after the gate).
+		/// Non-riders are rejected up-front with `NotRegisteredRider` and pay
+		/// the normal fee.
 		#[pallet::call_index(7)]
 		#[pallet::weight(T::WeightInfo::claim_order_delivery())]
-		pub fn claim_order_delivery(origin: OriginFor<T>, order_id: OrderId) -> DispatchResult {
+		pub fn claim_order_delivery(
+			origin: OriginFor<T>,
+			order_id: OrderId,
+		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 			ensure!(Riders::<T>::contains_key(&who), Error::<T>::NotRegisteredRider);
 
-			let mut order = Orders::<T>::get(order_id).ok_or(Error::<T>::UnknownOrder)?;
-			ensure!(
-				order.status == OrderStatus::ReadyForPickup,
-				Error::<T>::OrderNotReadyForPickup
-			);
-			ensure!(order.assigned_rider.is_none(), Error::<T>::OrderAlreadyClaimedByRider);
+			let rider_free = |error: DispatchError| DispatchErrorWithPostInfo {
+				post_info: PostDispatchInfo { actual_weight: None, pays_fee: Pays::No },
+				error,
+			};
+
+			let mut order = Orders::<T>::get(order_id)
+				.ok_or_else(|| rider_free(Error::<T>::UnknownOrder.into()))?;
+			if order.status != OrderStatus::ReadyForPickup {
+				return Err(rider_free(Error::<T>::OrderNotReadyForPickup.into()));
+			}
+			if order.assigned_rider.is_some() {
+				return Err(rider_free(Error::<T>::OrderAlreadyClaimedByRider.into()));
+			}
 
 			order.assigned_rider = Some(who.clone());
 			Orders::<T>::insert(order_id, order);
 			Self::deposit_event(Event::OrderDeliveryClaimed { order_id, rider: who });
-			Ok(())
+			Ok(PostDispatchInfo { actual_weight: None, pays_fee: Pays::No }.into())
 		}
 
 		/// Confirm pickup and start delivery as the assigned rider.
 		///
 		/// Moves the order to the terminal `OnItsWay` status.
+		///
+		/// ### Fees
+		///
+		/// Fee-less for registered riders (success or error after the gate).
+		/// Non-riders are rejected up-front with `NotRegisteredRider` and pay
+		/// the normal fee.
 		#[pallet::call_index(8)]
 		#[pallet::weight(T::WeightInfo::confirm_delivery_pickup())]
-		pub fn confirm_delivery_pickup(origin: OriginFor<T>, order_id: OrderId) -> DispatchResult {
+		pub fn confirm_delivery_pickup(
+			origin: OriginFor<T>,
+			order_id: OrderId,
+		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 			ensure!(Riders::<T>::contains_key(&who), Error::<T>::NotRegisteredRider);
 
-			let mut order = Orders::<T>::get(order_id).ok_or(Error::<T>::UnknownOrder)?;
-			ensure!(
-				order.status == OrderStatus::ReadyForPickup,
-				Error::<T>::OrderNotReadyForPickup
-			);
-			ensure!(order.assigned_rider.as_ref() == Some(&who), Error::<T>::NotAssignedRider);
+			let rider_free = |error: DispatchError| DispatchErrorWithPostInfo {
+				post_info: PostDispatchInfo { actual_weight: None, pays_fee: Pays::No },
+				error,
+			};
+
+			let mut order = Orders::<T>::get(order_id)
+				.ok_or_else(|| rider_free(Error::<T>::UnknownOrder.into()))?;
+			if order.status != OrderStatus::ReadyForPickup {
+				return Err(rider_free(Error::<T>::OrderNotReadyForPickup.into()));
+			}
+			if order.assigned_rider.as_ref() != Some(&who) {
+				return Err(rider_free(Error::<T>::NotAssignedRider.into()));
+			}
 
 			order.status = OrderStatus::OnItsWay;
 			Orders::<T>::insert(order_id, order);
@@ -594,7 +650,7 @@ pub mod pallet {
 				order_id,
 				status: OrderStatus::OnItsWay,
 			});
-			Ok(())
+			Ok(PostDispatchInfo { actual_weight: None, pays_fee: Pays::No }.into())
 		}
 
 		/// Finish a delivery by verifying the 4-digit PIN the customer shares
@@ -609,24 +665,53 @@ pub mod pallet {
 		///   `price` to the restaurant and `delivery_fee` to the rider. Both transfers use
 		///   `Preservation::Expendable` so the pallet account isn't required to stay above its
 		///   existential deposit — the held funds belong to the participants.
+		///
+		/// ### Fees
+		///
+		/// This call is **fee-less for registered riders** (both on success and on any
+		/// post-registration error), so an honest rider is never punished for a typo
+		/// PIN or a race with another rider. A caller that is not a registered rider
+		/// is rejected up-front (`NotRegisteredRider`) and pays the normal fee — this
+		/// preserves DoS resistance against random accounts spamming the extrinsic.
 		#[pallet::call_index(9)]
 		#[pallet::weight(T::WeightInfo::finish_order_delivery())]
 		pub fn finish_order_delivery(
 			origin: OriginFor<T>,
 			order_id: OrderId,
 			pin: BoundedVec<u8, MaxDeliveryPinLen>,
-		) -> DispatchResult {
+		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
-			let mut order = Orders::<T>::get(order_id).ok_or(Error::<T>::UnknownOrder)?;
-			ensure!(order.status == OrderStatus::OnItsWay, Error::<T>::OrderNotOnItsWay);
-			ensure!(order.assigned_rider.as_ref() == Some(&who), Error::<T>::NotAssignedRider);
+			// Gate fee waiver on *registered-rider* status. Until this check
+			// passes, a failure charges the normal fee (this branch returns a
+			// plain `DispatchError`, which converts to `Pays::Yes` post-info).
+			// Past this point the caller is a rider, so every outcome is free.
+			ensure!(Riders::<T>::contains_key(&who), Error::<T>::NotRegisteredRider);
+
+			// Helper: tag any error below as `Pays::No` so the rider isn't
+			// charged for legitimate failures (wrong PIN, not-yet-OnItsWay,
+			// etc.).
+			let rider_free = |error: DispatchError| DispatchErrorWithPostInfo {
+				post_info: PostDispatchInfo { actual_weight: None, pays_fee: Pays::No },
+				error,
+			};
+
+			let mut order = Orders::<T>::get(order_id)
+				.ok_or_else(|| rider_free(Error::<T>::UnknownOrder.into()))?;
+			if order.status != OrderStatus::OnItsWay {
+				return Err(rider_free(Error::<T>::OrderNotOnItsWay.into()));
+			}
+			if order.assigned_rider.as_ref() != Some(&who) {
+				return Err(rider_free(Error::<T>::NotAssignedRider.into()));
+			}
 
 			// Compare hashes (not plaintexts): the pallet never sees the raw
 			// PIN before this call and still won't store it — only the digest
 			// is checked against the commitment recorded at `place_order`.
 			let provided_hash = H256::from(blake2_256(pin.as_slice()));
-			ensure!(provided_hash == order.hashed_pin, Error::<T>::InvalidDeliveryPin);
+			if provided_hash != order.hashed_pin {
+				return Err(rider_free(Error::<T>::InvalidDeliveryPin.into()));
+			}
 
 			let pallet_account = Self::account_id();
 			let restaurant_amount = order.price;
@@ -642,7 +727,8 @@ pub mod pallet {
 					&order.restaurant,
 					restaurant_amount,
 					Preservation::Expendable,
-				)?;
+				)
+				.map_err(rider_free)?;
 			}
 			if rider_amount > 0 {
 				T::NativeBalance::transfer(
@@ -650,7 +736,8 @@ pub mod pallet {
 					&who,
 					rider_amount,
 					Preservation::Expendable,
-				)?;
+				)
+				.map_err(rider_free)?;
 			}
 
 			let restaurant_account = order.restaurant.clone();
@@ -668,7 +755,8 @@ pub mod pallet {
 				restaurant_amount,
 				rider_amount,
 			});
-			Ok(())
+
+			Ok(PostDispatchInfo { actual_weight: None, pays_fee: Pays::No }.into())
 		}
 	}
 

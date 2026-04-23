@@ -311,7 +311,10 @@ fn advance_order_status_sequential_until_terminal() {
 		assert_eq!(Orders::<Test>::get(0).unwrap().status, OrderStatus::InProgress);
 		assert_ok!(ProofOfExistence::advance_order_status(RuntimeOrigin::signed(2), 0));
 		assert_eq!(Orders::<Test>::get(0).unwrap().status, OrderStatus::ReadyForPickup);
-		assert_noop!(
+		// Caller is a registered restaurant, so the error path returns
+		// `Pays::No` — use `assert_err_ignore_postinfo!` to match only the
+		// `DispatchError` kind.
+		assert_err_ignore_postinfo!(
 			ProofOfExistence::advance_order_status(RuntimeOrigin::signed(2), 0),
 			Error::<Test>::OrderAwaitingRiderPickup,
 		);
@@ -319,7 +322,7 @@ fn advance_order_status_sequential_until_terminal() {
 		assert_ok!(ProofOfExistence::claim_order_delivery(RuntimeOrigin::signed(3), 0));
 		assert_ok!(ProofOfExistence::confirm_delivery_pickup(RuntimeOrigin::signed(3), 0));
 		assert_eq!(Orders::<Test>::get(0).unwrap().status, OrderStatus::OnItsWay);
-		assert_noop!(
+		assert_err_ignore_postinfo!(
 			ProofOfExistence::advance_order_status(RuntimeOrigin::signed(2), 0),
 			Error::<Test>::OrderAlreadyCompleted,
 		);
@@ -372,16 +375,48 @@ fn place_order_rejects_empty_lines() {
 
 #[test]
 fn advance_order_status_wrong_restaurant() {
+	// A *registered* restaurant that isn't the one for this order must still
+	// be blocked with `NotOrderRestaurant`. We register account 3 as a second
+	// restaurant so the fee waiver gate passes for them; the authorisation
+	// must then reject them on order ownership. The error is `Pays::No`
+	// (they're a registered restaurant), hence `assert_err_ignore_postinfo!`.
+	new_test_ext().execute_with(|| {
+		assert_ok!(ProofOfExistence::create_customer(RuntimeOrigin::signed(1)));
+		let venue2 = BoundedVec::try_from(b"Cafe".to_vec()).unwrap();
+		let menu2 = BoundedVec::try_from(vec![sample_menu_item(b"A")]).unwrap();
+		assert_ok!(ProofOfExistence::create_restaurant(RuntimeOrigin::signed(2), venue2, menu2));
+		let venue3 = BoundedVec::try_from(b"Diner".to_vec()).unwrap();
+		let menu3 = BoundedVec::try_from(vec![sample_menu_item(b"B")]).unwrap();
+		assert_ok!(ProofOfExistence::create_restaurant(RuntimeOrigin::signed(3), venue3, menu3));
+		let lines = BoundedVec::try_from(vec![OrderLine { menu_index: 0, quantity: 1 }]).unwrap();
+		assert_ok!(ProofOfExistence::place_order(RuntimeOrigin::signed(1), 2, lines, test_hash(4)));
+		assert_err_ignore_postinfo!(
+			ProofOfExistence::advance_order_status(RuntimeOrigin::signed(3), 0),
+			Error::<Test>::NotOrderRestaurant,
+		);
+	});
+}
+
+#[test]
+fn advance_order_status_rejects_non_restaurant_caller() {
+	// A caller that never registered as a restaurant is rejected up-front
+	// with `NotRegisteredRestaurant` and still pays the normal fee (default
+	// post-info with `Pays::Yes`). Using plain `assert_noop!` is fine here.
 	new_test_ext().execute_with(|| {
 		assert_ok!(ProofOfExistence::create_customer(RuntimeOrigin::signed(1)));
 		let venue = BoundedVec::try_from(b"Cafe".to_vec()).unwrap();
 		let menu = BoundedVec::try_from(vec![sample_menu_item(b"A")]).unwrap();
 		assert_ok!(ProofOfExistence::create_restaurant(RuntimeOrigin::signed(2), venue, menu));
 		let lines = BoundedVec::try_from(vec![OrderLine { menu_index: 0, quantity: 1 }]).unwrap();
-		assert_ok!(ProofOfExistence::place_order(RuntimeOrigin::signed(1), 2, lines, test_hash(4)));
+		assert_ok!(ProofOfExistence::place_order(
+			RuntimeOrigin::signed(1),
+			2,
+			lines,
+			test_hash(41),
+		));
 		assert_noop!(
-			ProofOfExistence::advance_order_status(RuntimeOrigin::signed(3), 0),
-			Error::<Test>::NotOrderRestaurant,
+			ProofOfExistence::advance_order_status(RuntimeOrigin::signed(9), 0),
+			Error::<Test>::NotRegisteredRestaurant,
 		);
 	});
 }
@@ -465,7 +500,10 @@ fn finish_order_delivery_rejects_wrong_pin() {
 		let pallet_account = ProofOfExistence::account_id();
 		let pallet_before = BalancesPallet::<Test>::free_balance(&pallet_account);
 
-		assert_noop!(
+		// Rider errors out with `Pays::No`, so we use `assert_err_ignore_postinfo!`
+		// (which only compares the `DispatchError` portion). State-noop is
+		// covered by the storage/balance asserts that follow.
+		assert_err_ignore_postinfo!(
 			ProofOfExistence::finish_order_delivery(RuntimeOrigin::signed(3), 0, pin_bv(b"9999"),),
 			Error::<Test>::InvalidDeliveryPin,
 		);
@@ -480,7 +518,10 @@ fn finish_order_delivery_only_assigned_rider() {
 	new_test_ext().execute_with(|| {
 		let _ = make_order_on_its_way(b"1234");
 		assert_ok!(ProofOfExistence::create_rider(RuntimeOrigin::signed(4)));
-		assert_noop!(
+		// Caller is a registered rider so the error post-info carries
+		// `Pays::No`; use `assert_err_ignore_postinfo!` to only assert the
+		// `DispatchError` kind.
+		assert_err_ignore_postinfo!(
 			ProofOfExistence::finish_order_delivery(RuntimeOrigin::signed(4), 0, pin_bv(b"1234"),),
 			Error::<Test>::NotAssignedRider,
 		);
@@ -503,7 +544,7 @@ fn finish_order_delivery_requires_on_its_way() {
 			test_hash(77),
 		));
 		// Still `Created`: not even assigned, much less `OnItsWay`.
-		assert_noop!(
+		assert_err_ignore_postinfo!(
 			ProofOfExistence::finish_order_delivery(RuntimeOrigin::signed(3), 0, pin_bv(b"1234"),),
 			Error::<Test>::OrderNotOnItsWay,
 		);
@@ -520,10 +561,48 @@ fn finish_order_delivery_rejects_double_complete() {
 			pin_bv(b"1234"),
 		));
 		// Second attempt must fail: status is now `Completed`, not `OnItsWay`.
-		assert_noop!(
+		assert_err_ignore_postinfo!(
 			ProofOfExistence::finish_order_delivery(RuntimeOrigin::signed(3), 0, pin_bv(b"1234"),),
 			Error::<Test>::OrderNotOnItsWay,
 		);
+	});
+}
+
+#[test]
+fn finish_order_delivery_is_free_for_rider() {
+	// Fee policy: registered riders pay no transaction fee for
+	// `finish_order_delivery`, on both the success path and on any error
+	// path taken after the rider-registration gate. A non-rider caller
+	// short-circuits on `NotRegisteredRider` *before* the waiver, and
+	// therefore pays the normal fee (`Pays::Yes`).
+	new_test_ext().execute_with(|| {
+		let _ = make_order_on_its_way(b"1234");
+
+		// Success: rider pays no fee.
+		let ok_info =
+			ProofOfExistence::finish_order_delivery(RuntimeOrigin::signed(3), 0, pin_bv(b"1234"))
+				.expect("happy path finishes delivery");
+		assert_eq!(ok_info.pays_fee, Pays::No);
+	});
+
+	new_test_ext().execute_with(|| {
+		// Wrong-PIN attempt by the registered rider: still free.
+		let _ = make_order_on_its_way(b"1234");
+		let err =
+			ProofOfExistence::finish_order_delivery(RuntimeOrigin::signed(3), 0, pin_bv(b"9999"))
+				.expect_err("wrong PIN must fail");
+		assert_eq!(err.post_info.pays_fee, Pays::No);
+	});
+
+	new_test_ext().execute_with(|| {
+		// Non-rider caller is rejected up-front and pays the normal fee —
+		// `ensure!` on `NotRegisteredRider` returns a plain `DispatchError`,
+		// which converts to `PostDispatchInfo { pays_fee: Yes, .. }`.
+		let _ = make_order_on_its_way(b"1234");
+		let err =
+			ProofOfExistence::finish_order_delivery(RuntimeOrigin::signed(99), 0, pin_bv(b"1234"))
+				.expect_err("non-rider must fail");
+		assert_eq!(err.post_info.pays_fee, Pays::Yes);
 	});
 }
 
@@ -536,9 +615,130 @@ fn advance_order_status_rejects_after_completed() {
 			0,
 			pin_bv(b"1234"),
 		));
-		assert_noop!(
+		// Restaurant 2 is registered, so the error is tagged `Pays::No`.
+		assert_err_ignore_postinfo!(
 			ProofOfExistence::advance_order_status(RuntimeOrigin::signed(2), 0),
 			Error::<Test>::OrderAlreadyCompleted,
 		);
+	});
+}
+
+#[test]
+fn advance_order_status_is_free_for_restaurant() {
+	// Success path: the restaurant pays no fee for pushing an order through
+	// its kitchen states.
+	new_test_ext().execute_with(|| {
+		assert_ok!(ProofOfExistence::create_customer(RuntimeOrigin::signed(1)));
+		let venue = BoundedVec::try_from(b"Cafe".to_vec()).unwrap();
+		let menu = BoundedVec::try_from(vec![sample_menu_item(b"A")]).unwrap();
+		assert_ok!(ProofOfExistence::create_restaurant(RuntimeOrigin::signed(2), venue, menu));
+		let lines = BoundedVec::try_from(vec![OrderLine { menu_index: 0, quantity: 1 }]).unwrap();
+		assert_ok!(ProofOfExistence::place_order(
+			RuntimeOrigin::signed(1),
+			2,
+			lines,
+			test_hash(51),
+		));
+		let ok_info = ProofOfExistence::advance_order_status(RuntimeOrigin::signed(2), 0)
+			.expect("restaurant can advance its own order");
+		assert_eq!(ok_info.pays_fee, Pays::No);
+	});
+
+	// Error path for a registered restaurant: `Pays::No` still holds (e.g.
+	// trying to advance an unknown order).
+	new_test_ext().execute_with(|| {
+		let venue = BoundedVec::try_from(b"Cafe".to_vec()).unwrap();
+		let menu = BoundedVec::try_from(vec![sample_menu_item(b"A")]).unwrap();
+		assert_ok!(ProofOfExistence::create_restaurant(RuntimeOrigin::signed(2), venue, menu));
+		let err = ProofOfExistence::advance_order_status(RuntimeOrigin::signed(2), 42)
+			.expect_err("no order 42");
+		assert_eq!(err.post_info.pays_fee, Pays::No);
+	});
+
+	// Non-restaurant caller: fee is charged (DoS resistance).
+	new_test_ext().execute_with(|| {
+		let err = ProofOfExistence::advance_order_status(RuntimeOrigin::signed(9), 0)
+			.expect_err("non-restaurant must fail");
+		assert_eq!(err.post_info.pays_fee, Pays::Yes);
+	});
+}
+
+#[test]
+fn claim_order_delivery_is_free_for_rider() {
+	new_test_ext().execute_with(|| {
+		// Success: registered rider claims a `ReadyForPickup` order.
+		assert_ok!(ProofOfExistence::create_customer(RuntimeOrigin::signed(1)));
+		let venue = BoundedVec::try_from(b"Cafe".to_vec()).unwrap();
+		let menu = BoundedVec::try_from(vec![sample_menu_item(b"A")]).unwrap();
+		assert_ok!(ProofOfExistence::create_restaurant(RuntimeOrigin::signed(2), venue, menu));
+		let lines = BoundedVec::try_from(vec![OrderLine { menu_index: 0, quantity: 1 }]).unwrap();
+		assert_ok!(ProofOfExistence::place_order(
+			RuntimeOrigin::signed(1),
+			2,
+			lines,
+			test_hash(52),
+		));
+		assert_ok!(ProofOfExistence::advance_order_status(RuntimeOrigin::signed(2), 0));
+		assert_ok!(ProofOfExistence::advance_order_status(RuntimeOrigin::signed(2), 0));
+		assert_ok!(ProofOfExistence::create_rider(RuntimeOrigin::signed(3)));
+		let ok_info = ProofOfExistence::claim_order_delivery(RuntimeOrigin::signed(3), 0)
+			.expect("rider claims ready-for-pickup order");
+		assert_eq!(ok_info.pays_fee, Pays::No);
+	});
+
+	new_test_ext().execute_with(|| {
+		// Error path for a registered rider stays free.
+		assert_ok!(ProofOfExistence::create_rider(RuntimeOrigin::signed(3)));
+		let err = ProofOfExistence::claim_order_delivery(RuntimeOrigin::signed(3), 42)
+			.expect_err("no order 42");
+		assert_eq!(err.post_info.pays_fee, Pays::No);
+	});
+
+	new_test_ext().execute_with(|| {
+		// Non-rider caller pays the normal fee.
+		let err = ProofOfExistence::claim_order_delivery(RuntimeOrigin::signed(9), 0)
+			.expect_err("non-rider must fail");
+		assert_eq!(err.post_info.pays_fee, Pays::Yes);
+	});
+}
+
+#[test]
+fn confirm_delivery_pickup_is_free_for_rider() {
+	new_test_ext().execute_with(|| {
+		// Success path: assigned rider confirms pickup on their claimed order.
+		assert_ok!(ProofOfExistence::create_customer(RuntimeOrigin::signed(1)));
+		let venue = BoundedVec::try_from(b"Cafe".to_vec()).unwrap();
+		let menu = BoundedVec::try_from(vec![sample_menu_item(b"A")]).unwrap();
+		assert_ok!(ProofOfExistence::create_restaurant(RuntimeOrigin::signed(2), venue, menu));
+		let lines = BoundedVec::try_from(vec![OrderLine { menu_index: 0, quantity: 1 }]).unwrap();
+		assert_ok!(ProofOfExistence::place_order(
+			RuntimeOrigin::signed(1),
+			2,
+			lines,
+			test_hash(53),
+		));
+		assert_ok!(ProofOfExistence::advance_order_status(RuntimeOrigin::signed(2), 0));
+		assert_ok!(ProofOfExistence::advance_order_status(RuntimeOrigin::signed(2), 0));
+		assert_ok!(ProofOfExistence::create_rider(RuntimeOrigin::signed(3)));
+		assert_ok!(ProofOfExistence::claim_order_delivery(RuntimeOrigin::signed(3), 0));
+		let ok_info = ProofOfExistence::confirm_delivery_pickup(RuntimeOrigin::signed(3), 0)
+			.expect("assigned rider confirms pickup");
+		assert_eq!(ok_info.pays_fee, Pays::No);
+	});
+
+	new_test_ext().execute_with(|| {
+		// A registered rider that isn't the assigned one still pays no fee.
+		let _ = make_order_on_its_way(b"1234"); // rider 3 is assigned, order is `OnItsWay`.
+		assert_ok!(ProofOfExistence::create_rider(RuntimeOrigin::signed(4)));
+		let err = ProofOfExistence::confirm_delivery_pickup(RuntimeOrigin::signed(4), 0)
+			.expect_err("rider 4 is not assigned");
+		assert_eq!(err.post_info.pays_fee, Pays::No);
+	});
+
+	new_test_ext().execute_with(|| {
+		// Non-rider caller pays the normal fee.
+		let err = ProofOfExistence::confirm_delivery_pickup(RuntimeOrigin::signed(9), 0)
+			.expect_err("non-rider must fail");
+		assert_eq!(err.post_info.pays_fee, Pays::Yes);
 	});
 }
