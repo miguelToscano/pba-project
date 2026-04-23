@@ -5,138 +5,205 @@
 @layer base {
   :root {
     --color-polka: 230 0 122;
-    --color-surface: 10 10 15;
+    --color-surface: 8 8 16;
   }
 
   body {
     @apply font-body antialiased;
-    background-color: #0a0a0f;
-    color: #f0eef5;
+    background-color: #080810;
+    color: #eee9f7;
   }
 
-  /* Custom scrollbar */
-  ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-  }
-  ::-webkit-scrollbar-track {
-    background: transparent;
-  }
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb {
-    background: rgba(155, 151, 168, 0.25);
+    background: rgba(139, 134, 153, 0.2);
     border-radius: 3px;
   }
-  ::-webkit-scrollbar-thumb:hover {
-    background: rgba(155, 151, 168, 0.4);
-  }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(139, 134, 153, 0.35); }
 
-  /* Selection color */
-  ::selection {
-    background: rgba(230, 0, 122, 0.3);
-    color: #fff;
-  }
+  ::selection { background: rgba(230, 0, 122, 0.3); color: #fff; }
 }
 
 @layer components {
+  /* ── Cards ─────────────────────────────────────── */
   .card {
-    @apply rounded-xl border border-white/[0.06] p-5;
-    background: linear-gradient(
-      135deg,
-      rgba(16, 16, 24, 0.85) 0%,
-      rgba(20, 18, 28, 0.8) 100%
-    );
-    backdrop-filter: blur(12px);
+    @apply rounded-2xl border p-5;
+    border-color: rgba(255, 255, 255, 0.07);
+    background: linear-gradient(145deg, rgba(14, 14, 26, 0.92) 0%, rgba(16, 16, 28, 0.88) 100%);
+    backdrop-filter: blur(16px);
     box-shadow:
-      0 1px 3px 0 rgba(0, 0, 0, 0.3),
-      0 1px 2px -1px rgba(0, 0, 0, 0.3),
-      inset 0 1px 0 0 rgba(255, 255, 255, 0.03);
+      0 1px 3px rgba(0, 0, 0, 0.45),
+      0 1px 2px -1px rgba(0, 0, 0, 0.45),
+      inset 0 1px 0 rgba(255, 255, 255, 0.04);
   }
 
   .card-hover {
     @apply card transition-all duration-300;
   }
   .card-hover:hover {
-    border-color: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.12);
     box-shadow:
-      0 4px 12px 0 rgba(0, 0, 0, 0.4),
-      0 2px 4px -1px rgba(0, 0, 0, 0.3),
-      inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
-    transform: translateY(-1px);
+      0 8px 24px rgba(0, 0, 0, 0.5),
+      0 2px 4px -1px rgba(0, 0, 0, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    transform: translateY(-2px);
   }
 
+  /* ── Inputs ─────────────────────────────────────── */
   .input-field {
-    @apply rounded-lg border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-text-primary font-mono text-sm;
+    @apply rounded-xl border bg-white/[0.04] px-3 py-2.5 text-text-primary font-mono text-sm;
     @apply transition-all duration-200 placeholder:text-text-muted;
-    @apply focus:outline-none focus:border-polka-500/40 focus:ring-1 focus:ring-polka-500/20;
+    @apply focus:outline-none;
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+  .input-field:focus {
+    border-color: rgba(230, 0, 122, 0.4);
+    box-shadow: 0 0 0 3px rgba(230, 0, 122, 0.1);
   }
 
+  /* ── Buttons ────────────────────────────────────── */
   .btn-primary {
-    @apply rounded-lg px-4 py-2 text-sm font-medium text-white transition-all duration-200;
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition-all duration-200;
     @apply disabled:opacity-40 disabled:cursor-not-allowed;
-    background: linear-gradient(135deg, #e6007a 0%, #c30066 100%);
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    background: linear-gradient(135deg, #e6007a 0%, #b80061 100%);
+    box-shadow:
+      0 1px 3px rgba(0, 0, 0, 0.45),
+      0 0 0 1px rgba(230, 0, 122, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.12);
   }
   .btn-primary:not(:disabled):hover {
     background: linear-gradient(135deg, #ff1a8f 0%, #e6007a 100%);
-    box-shadow: 0 2px 8px rgba(230, 0, 122, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.15);
-    transform: translateY(-0.5px);
+    box-shadow:
+      0 4px 20px rgba(230, 0, 122, 0.4),
+      0 0 0 1px rgba(230, 0, 122, 0.35),
+      inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    transform: translateY(-1px);
   }
-  .btn-primary:active {
-    transform: translateY(0);
-  }
+  .btn-primary:not(:disabled):active { transform: translateY(0); }
 
   .btn-secondary {
-    @apply rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200;
-    @apply text-text-secondary border border-white/[0.08] bg-white/[0.04];
-    @apply disabled:opacity-40 disabled:cursor-not-allowed;
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-200;
+    @apply text-text-secondary border bg-white/[0.04] disabled:opacity-40 disabled:cursor-not-allowed;
+    border-color: rgba(255, 255, 255, 0.08);
   }
   .btn-secondary:not(:disabled):hover {
-    @apply text-text-primary bg-white/[0.08] border-white/[0.12];
+    @apply text-text-primary bg-white/[0.07];
+    border-color: rgba(255, 255, 255, 0.14);
   }
 
   .btn-accent {
-    @apply rounded-lg px-4 py-2 text-sm font-medium text-white transition-all duration-200;
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition-all duration-200;
     @apply disabled:opacity-40 disabled:cursor-not-allowed;
   }
 
-  .label {
-    @apply block text-sm font-medium text-text-secondary mb-1.5;
-  }
+  /* ── Typography ─────────────────────────────────── */
+  .label { @apply block text-sm font-medium text-text-secondary mb-1.5; }
 
   .page-title {
-    @apply text-3xl font-bold tracking-tight font-display;
+    @apply text-4xl md:text-5xl font-bold tracking-tight font-display leading-[1.1];
   }
 
-  .section-title {
-    @apply text-lg font-semibold text-text-primary font-display;
-  }
+  .section-title { @apply text-lg font-semibold text-text-primary font-display; }
 
+  /* ── Status badges ──────────────────────────────── */
   .status-badge {
-    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium;
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold;
+  }
+
+  /* ── Role panel tabs ────────────────────────────── */
+  .role-tab {
+    @apply relative flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-all duration-200 text-text-secondary;
+  }
+  .role-tab:hover { @apply text-text-primary; }
+  .role-tab-dot { @apply w-2 h-2 rounded-full flex-shrink-0 transition-all duration-300; }
+  .role-tab-customer.role-tab-active {
+    background: rgba(230, 0, 122, 0.12);
+    border: 1px solid rgba(230, 0, 122, 0.25);
+    color: #f0eef5;
+  }
+  .role-tab-customer.role-tab-active .role-tab-dot { background: #e6007a; box-shadow: 0 0 8px rgba(230,0,122,0.6); }
+  .role-tab-restaurant.role-tab-active {
+    background: rgba(245, 158, 11, 0.12);
+    border: 1px solid rgba(245, 158, 11, 0.25);
+    color: #f0eef5;
+  }
+  .role-tab-restaurant.role-tab-active .role-tab-dot { background: #F59E0B; box-shadow: 0 0 8px rgba(245,158,11,0.6); }
+  .role-tab-rider.role-tab-active {
+    background: rgba(6, 182, 212, 0.12);
+    border: 1px solid rgba(6, 182, 212, 0.25);
+    color: #f0eef5;
+  }
+  .role-tab-rider.role-tab-active .role-tab-dot { background: #06B6D4; box-shadow: 0 0 8px rgba(6,182,212,0.6); }
+
+  /* ── Shimmer loading skeleton ───────────────────── */
+  .skeleton {
+    background: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.03) 0%,
+      rgba(255, 255, 255, 0.07) 50%,
+      rgba(255, 255, 255, 0.03) 100%
+    );
+    background-size: 500px 100%;
+    animation: shimmer 1.8s ease-in-out infinite;
+    @apply rounded-lg;
+  }
+
+  /* ── Order item card ────────────────────────────── */
+  .order-card {
+    @apply rounded-xl border px-4 py-3.5 space-y-2.5;
+    border-color: rgba(255, 255, 255, 0.07);
+    background: rgba(14, 14, 26, 0.6);
+  }
+
+  /* ── Restaurant browse card ─────────────────────── */
+  .restaurant-browse-card {
+    @apply rounded-xl border px-4 py-3 flex items-center gap-3 cursor-pointer transition-all duration-200;
+    border-color: rgba(255, 255, 255, 0.07);
+    background: rgba(14, 14, 26, 0.5);
+  }
+  .restaurant-browse-card:hover {
+    border-color: rgba(245, 158, 11, 0.3);
+    background: rgba(245, 158, 11, 0.05);
+  }
+
+  /* ── Rider order card ───────────────────────────── */
+  .rider-order-item {
+    @apply rounded-xl border p-4 transition-all duration-200;
+    border-color: rgba(255, 255, 255, 0.07);
+    background: rgba(14, 14, 26, 0.6);
+  }
+  .rider-order-item:hover {
+    border-color: rgba(6, 182, 212, 0.2);
+    background: rgba(6, 182, 212, 0.04);
   }
 }
 
-/* Background pattern — subtle dot grid */
+/* ── Background ─────────────────────────────────── */
 .bg-pattern {
-  background-image: radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-  background-size: 24px 24px;
+  background-color: #080810;
+  background-image:
+    radial-gradient(ellipse at 12% 35%, rgba(230, 0, 122, 0.07) 0%, transparent 52%),
+    radial-gradient(ellipse at 88% 15%, rgba(6, 182, 212, 0.05) 0%, transparent 48%),
+    radial-gradient(rgba(255, 255, 255, 0.022) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 28px 28px;
 }
 
-/* Animated gradient orb */
+/* ── Ambient orbs ───────────────────────────────── */
 .gradient-orb {
   position: fixed;
-  width: 600px;
-  height: 600px;
+  width: 700px;
+  height: 700px;
   border-radius: 50%;
-  filter: blur(120px);
-  opacity: 0.07;
+  filter: blur(150px);
+  opacity: 0.05;
   pointer-events: none;
   z-index: 0;
 }
 
-/* Staggered animation delays */
-.stagger-1 { animation-delay: 0.05s; }
-.stagger-2 { animation-delay: 0.1s; }
-.stagger-3 { animation-delay: 0.15s; }
-.stagger-4 { animation-delay: 0.2s; }
-.stagger-5 { animation-delay: 0.25s; }
+/* ── Stagger delays ─────────────────────────────── */
+.stagger-1 { animation-delay: 0.06s; }
+.stagger-2 { animation-delay: 0.12s; }
+.stagger-3 { animation-delay: 0.18s; }
+.stagger-4 { animation-delay: 0.24s; }
+.stagger-5 { animation-delay: 0.30s; }

@@ -5,10 +5,10 @@ export default {
     extend: {
       colors: {
         surface: {
-          950: "#0a0a0f",
-          900: "rgba(16, 16, 24, 0.85)",
-          800: "rgba(24, 24, 36, 0.9)",
-          700: "rgba(36, 36, 52, 0.95)",
+          950: "#080810",
+          900: "#0E0E1A",
+          800: "#15152A",
+          700: "#1E1E38",
         },
         polka: {
           50: "#fff1f3",
@@ -22,24 +22,29 @@ export default {
           800: "#880049",
           900: "#740041",
         },
+        role: {
+          customer: "#e6007a",
+          restaurant: "#F59E0B",
+          rider: "#06B6D4",
+        },
         accent: {
-          blue: "#4cc2ff",
+          blue: "#06B6D4",
           purple: "#a78bfa",
-          green: "#34d399",
-          orange: "#fb923c",
+          green: "#10B981",
+          orange: "#F59E0B",
           red: "#f87171",
           yellow: "#fbbf24",
         },
         text: {
-          primary: "#f0eef5",
-          secondary: "#9b97a8",
-          tertiary: "#6b6780",
-          muted: "#4a4660",
+          primary: "#EEE9F7",
+          secondary: "#8B8699",
+          tertiary: "#6A667A",
+          muted: "#49465A",
         },
       },
       fontFamily: {
-        display: ['"Instrument Sans"', "system-ui", "-apple-system", "sans-serif"],
-        body: ['"Instrument Sans"', "system-ui", "-apple-system", "sans-serif"],
+        display: ['"Syne"', "system-ui", "-apple-system", "sans-serif"],
+        body: ['"DM Sans"', "system-ui", "-apple-system", "sans-serif"],
         mono: ['"JetBrains Mono"', "ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
       },
       backgroundImage: {
@@ -47,8 +52,10 @@ export default {
       },
       animation: {
         "fade-in": "fadeIn 0.4s ease-out forwards",
-        "slide-up": "slideUp 0.5s ease-out forwards",
-        "pulse-slow": "pulse 3s ease-in-out infinite",
+        "slide-up": "slideUp 0.35s cubic-bezier(0.16,1,0.3,1) forwards",
+        "shimmer": "shimmer 1.8s ease-in-out infinite",
+        "glow-pulse": "glowPulse 2.5s ease-in-out infinite",
+        "scale-in": "scaleIn 0.2s ease-out forwards",
       },
       keyframes: {
         fadeIn: {
@@ -56,20 +63,34 @@ export default {
           "100%": { opacity: "1" },
         },
         slideUp: {
-          "0%": { opacity: "0", transform: "translateY(12px)" },
+          "0%": { opacity: "0", transform: "translateY(16px)" },
           "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        shimmer: {
+          "0%": { backgroundPosition: "-500px 0" },
+          "100%": { backgroundPosition: "500px 0" },
+        },
+        glowPulse: {
+          "0%, 100%": { opacity: "0.5" },
+          "50%": { opacity: "1" },
+        },
+        scaleIn: {
+          "0%": { opacity: "0", transform: "scale(0.95)" },
+          "100%": { opacity: "1", transform: "scale(1)" },
         },
       },
       borderRadius: {
         xl: "1rem",
         "2xl": "1.25rem",
+        "3xl": "1.5rem",
       },
       boxShadow: {
-        glow: "0 0 24px -4px rgba(230, 0, 122, 0.15)",
-        "glow-lg": "0 0 48px -8px rgba(230, 0, 122, 0.2)",
-        card: "0 1px 3px 0 rgba(0, 0, 0, 0.3), 0 1px 2px -1px rgba(0, 0, 0, 0.3)",
-        "card-hover":
-          "0 4px 12px 0 rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3)",
+        glow: "0 0 24px -4px rgba(230, 0, 122, 0.2)",
+        "glow-lg": "0 0 48px -8px rgba(230, 0, 122, 0.3)",
+        "glow-cyan": "0 0 24px -4px rgba(6, 182, 212, 0.2)",
+        "glow-amber": "0 0 24px -4px rgba(245, 158, 11, 0.2)",
+        card: "0 1px 3px rgba(0,0,0,0.4), 0 1px 2px -1px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.03)",
+        "card-hover": "0 8px 24px rgba(0,0,0,0.5), 0 2px 4px -1px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)",
       },
     },
   },
