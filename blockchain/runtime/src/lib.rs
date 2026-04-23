@@ -157,11 +157,13 @@ pub const MINUTES: BlockNumber = 60_000 / (MILLI_SECS_PER_BLOCK as BlockNumber);
 pub const HOURS: BlockNumber = MINUTES * 60;
 pub const DAYS: BlockNumber = HOURS * 24;
 
-pub const UNIT: Balance = 1_000_000_000_000;
-pub const MILLI_UNIT: Balance = 1_000_000_000;
-pub const MICRO_UNIT: Balance = 1_000_000;
+/// Native token scale aligned with `tokenDecimals = 1` in the chain spec.
+/// 1 UNIT = 10 plancks, so a planck is 0.1 UNIT in user-facing displays.
+pub const UNIT: Balance = 10;
+pub const MILLI_UNIT: Balance = 1;
+pub const MICRO_UNIT: Balance = 1;
 
-pub const EXISTENTIAL_DEPOSIT: Balance = MILLI_UNIT;
+pub const EXISTENTIAL_DEPOSIT: Balance = 1;
 
 const AVERAGE_ON_INITIALIZE_RATIO: Perbill = Perbill::from_percent(5);
 const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);

@@ -123,7 +123,7 @@ impl pallet_transaction_payment::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type OnChargeTransaction = pallet_transaction_payment::FungibleAdapter<Balances, ()>;
 	type WeightToFee = pallet_revive::evm::fees::BlockRatioFee<
-		{ super::MILLI_UNIT / 10 },
+		1,
 		{ (100 * ExtrinsicBaseWeight::get().ref_time()) as u128 },
 		Runtime,
 		Balance,

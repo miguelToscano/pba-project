@@ -115,7 +115,7 @@
   "name": "Polkadot Stack Template",
   "para_id": 1000,
   "properties": {
-    "tokenDecimals": 12,
+    "tokenDecimals": 1,
     "tokenSymbol": "UNIT"
   },
   "protocolId": null,
