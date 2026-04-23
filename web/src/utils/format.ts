@@ -15,8 +15,8 @@ export function formatDispatchError(err: unknown): string {
  */
 export const TOKEN_SYMBOL = "UNIT";
 
-/** Native balance has 1 decimal (`UNIT = 10` plancks). */
-export const TOKEN_DECIMALS = 1;
+/** No sub-unit decimals: 1 UNIT = 1 planck. Stored value = displayed value. */
+export const TOKEN_DECIMALS = 0;
 
 const TOKEN_SCALE = 10n ** BigInt(TOKEN_DECIMALS);
 

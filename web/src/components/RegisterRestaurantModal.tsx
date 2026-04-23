@@ -253,7 +253,7 @@ export default function RegisterRestaurantModal({ open, onClose, isSubmitting, o
 									/>
 									<label className="block">
 										<span className="text-xs text-text-tertiary">
-											Price (u128, whole units)
+											Price (UNIT)
 										</span>
 										<input
 											type="text"

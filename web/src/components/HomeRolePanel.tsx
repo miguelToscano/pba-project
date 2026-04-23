@@ -1632,7 +1632,7 @@ function RestaurantMenuModal({
 												</p>
 											)}
 											<p className="text-xs font-mono text-text-secondary mt-0.5">
-												{formatMenuPriceUnits(row.price)} units
+												{formatBalance(row.price)} {TOKEN_SYMBOL}
 											</p>
 										</div>
 										<div className="flex items-center gap-1.5 flex-shrink-0">
@@ -1757,10 +1757,10 @@ function RestaurantMenuModal({
 											{selectedItems.length !== 1 ? "s" : ""}
 											<span className="text-text-muted mx-1">·</span>
 											<span className="font-mono font-semibold text-text-primary">
-												{subtotal.toLocaleString()}
+												{formatBalance(subtotal)}
 											</span>
 											<span className="text-text-muted ml-1 text-xs">
-												units
+												{TOKEN_SYMBOL}
 											</span>
 										</>
 									) : (
@@ -1821,7 +1821,7 @@ function RestaurantMenuModal({
 											</span>
 										</div>
 										<span className="font-mono text-text-secondary whitespace-nowrap text-xs">
-											{(row.price * BigInt(qty)).toLocaleString()}
+											{formatBalance(row.price * BigInt(qty))} {TOKEN_SYMBOL}
 										</span>
 									</div>
 								))}
@@ -1837,24 +1837,18 @@ function RestaurantMenuModal({
 							>
 								<div className="flex justify-between text-sm text-text-secondary">
 									<span>Subtotal</span>
-									<span className="font-mono">
-										{subtotal.toLocaleString()} units
-									</span>
+									<span className="font-mono">{formatBalance(subtotal)} {TOKEN_SYMBOL}</span>
 								</div>
 								<div className="flex justify-between text-sm text-text-secondary">
 									<span>Delivery fee</span>
-									<span className="font-mono">
-										{deliveryFee.toLocaleString()} units
-									</span>
+									<span className="font-mono">{formatBalance(deliveryFee)} {TOKEN_SYMBOL}</span>
 								</div>
 								<div
 									className="pt-2 border-t flex justify-between font-semibold text-text-primary"
 									style={{ borderColor: "rgba(255,255,255,0.08)" }}
 								>
 									<span>Total</span>
-									<span className="font-mono">
-										{total.toLocaleString()} units
-									</span>
+									<span className="font-mono">{formatBalance(total)} {TOKEN_SYMBOL}</span>
 								</div>
 							</div>
 

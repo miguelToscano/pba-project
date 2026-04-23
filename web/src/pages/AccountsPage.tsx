@@ -234,7 +234,7 @@ export default function AccountsPage() {
 			return;
 		}
 		try {
-			const amount = BigInt(fundAmount) * 1_000_000_000_000n;
+			const amount = BigInt(fundAmount) * 1n;
 			setFundStatus(`Funding ${accountName}...`);
 			const client = getClient(wsUrl);
 			const api = client.getTypedApi(stack_template);
