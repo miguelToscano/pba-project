@@ -417,41 +417,50 @@ pub mod pallet {
 		}
 
 		/// Register the caller as a customer.
+		///
+		/// Fee policy: a successful first-time registration is free (`Pays::No`) so any
+		/// signed account with just the existential deposit can onboard. Duplicate
+		/// attempts and bad origins fall through to the default `Pays::Yes`, which
+		/// bounds the spam surface to "one free row per account, per role".
 		#[pallet::call_index(2)]
 		#[pallet::weight(T::WeightInfo::create_customer())]
-		pub fn create_customer(origin: OriginFor<T>) -> DispatchResult {
+		pub fn create_customer(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 			ensure!(!Customers::<T>::contains_key(&who), Error::<T>::AlreadyCustomer);
 			Customers::<T>::insert(&who, Customer);
 			Self::deposit_event(Event::CustomerCreated { who });
-			Ok(())
+			Ok(Pays::No.into())
 		}
 
 		/// Register the caller as a restaurant operator with display name and menu.
+		///
+		/// See [`Self::create_customer`] for the fee-waiver rationale.
 		#[pallet::call_index(3)]
 		#[pallet::weight(T::WeightInfo::create_restaurant())]
 		pub fn create_restaurant(
 			origin: OriginFor<T>,
 			name: BoundedVec<u8, ConstU32<128>>,
 			menu: BoundedVec<MenuItem, ConstU32<64>>,
-		) -> DispatchResult {
+		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 			ensure!(!Restaurants::<T>::contains_key(&who), Error::<T>::AlreadyRestaurant);
 			ensure!(!name.is_empty(), Error::<T>::RestaurantNameEmpty);
 			Restaurants::<T>::insert(&who, Restaurant { name, menu });
 			Self::deposit_event(Event::RestaurantCreated { who });
-			Ok(())
+			Ok(Pays::No.into())
 		}
 
 		/// Register the caller as a rider.
+		///
+		/// See [`Self::create_customer`] for the fee-waiver rationale.
 		#[pallet::call_index(4)]
 		#[pallet::weight(T::WeightInfo::create_rider())]
-		pub fn create_rider(origin: OriginFor<T>) -> DispatchResult {
+		pub fn create_rider(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 			ensure!(!Riders::<T>::contains_key(&who), Error::<T>::AlreadyRider);
 			Riders::<T>::insert(&who, Rider);
 			Self::deposit_event(Event::RiderCreated { who });
-			Ok(())
+			Ok(Pays::No.into())
 		}
 
 		/// Place an order at `restaurant` with menu lines (indices into that restaurant's menu).

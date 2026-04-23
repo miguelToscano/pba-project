@@ -742,3 +742,72 @@ fn confirm_delivery_pickup_is_free_for_rider() {
 		assert_eq!(err.post_info.pays_fee, Pays::Yes);
 	});
 }
+
+#[test]
+fn create_customer_is_free_on_success_but_charges_on_duplicate() {
+	// Fee policy: the first successful `create_customer` is free so any funded
+	// account can onboard. A duplicate registration must pay the normal fee so
+	// an attacker can't cheaply probe the extrinsic in a loop.
+	new_test_ext().execute_with(|| {
+		let ok_info = ProofOfExistence::create_customer(RuntimeOrigin::signed(1))
+			.expect("fresh registration succeeds");
+		assert_eq!(ok_info.pays_fee, Pays::No);
+
+		let err = ProofOfExistence::create_customer(RuntimeOrigin::signed(1))
+			.expect_err("duplicate registration fails");
+		assert_eq!(err.post_info.pays_fee, Pays::Yes);
+	});
+
+	// Bad origin (unsigned) also pays the normal fee.
+	new_test_ext().execute_with(|| {
+		let err = ProofOfExistence::create_customer(RuntimeOrigin::none())
+			.expect_err("unsigned call is rejected");
+		assert_eq!(err.post_info.pays_fee, Pays::Yes);
+	});
+}
+
+#[test]
+fn create_restaurant_is_free_on_success_but_charges_on_error() {
+	new_test_ext().execute_with(|| {
+		let venue = BoundedVec::try_from(b"Cafe".to_vec()).unwrap();
+		let menu = BoundedVec::try_from(vec![sample_menu_item(b"A")]).unwrap();
+		let ok_info =
+			ProofOfExistence::create_restaurant(RuntimeOrigin::signed(2), venue, menu.clone())
+				.expect("fresh registration succeeds");
+		assert_eq!(ok_info.pays_fee, Pays::No);
+
+		// Duplicate: still pays the fee.
+		let dup_venue = BoundedVec::try_from(b"Cafe".to_vec()).unwrap();
+		let err = ProofOfExistence::create_restaurant(RuntimeOrigin::signed(2), dup_venue, menu)
+			.expect_err("duplicate restaurant");
+		assert_eq!(err.post_info.pays_fee, Pays::Yes);
+	});
+
+	// Empty name is rejected up-front with the normal fee.
+	new_test_ext().execute_with(|| {
+		let empty: BoundedVec<u8, ConstU32<128>> = BoundedVec::default();
+		let menu = BoundedVec::try_from(vec![sample_menu_item(b"A")]).unwrap();
+		let err = ProofOfExistence::create_restaurant(RuntimeOrigin::signed(2), empty, menu)
+			.expect_err("empty name rejected");
+		assert_eq!(err.post_info.pays_fee, Pays::Yes);
+	});
+}
+
+#[test]
+fn create_rider_is_free_on_success_but_charges_on_duplicate() {
+	new_test_ext().execute_with(|| {
+		let ok_info = ProofOfExistence::create_rider(RuntimeOrigin::signed(3))
+			.expect("fresh registration succeeds");
+		assert_eq!(ok_info.pays_fee, Pays::No);
+
+		let err = ProofOfExistence::create_rider(RuntimeOrigin::signed(3))
+			.expect_err("duplicate registration fails");
+		assert_eq!(err.post_info.pays_fee, Pays::Yes);
+	});
+
+	new_test_ext().execute_with(|| {
+		let err = ProofOfExistence::create_rider(RuntimeOrigin::none())
+			.expect_err("unsigned call is rejected");
+		assert_eq!(err.post_info.pays_fee, Pays::Yes);
+	});
+}

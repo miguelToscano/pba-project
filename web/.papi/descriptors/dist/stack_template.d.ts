@@ -1463,14 +1463,23 @@ type ICalls = {
         revoke_claim: TxDescriptor<Anonymize<I1jm8m1rh9e20v>>;
         /**
          * Register the caller as a customer.
+         *
+         * Fee policy: a successful first-time registration is free (`Pays::No`) so any
+         * signed account with just the existential deposit can onboard. Duplicate
+         * attempts and bad origins fall through to the default `Pays::Yes`, which
+         * bounds the spam surface to "one free row per account, per role".
          */
         create_customer: TxDescriptor<undefined>;
         /**
          * Register the caller as a restaurant operator with display name and menu.
+         *
+         * See [`Self::create_customer`] for the fee-waiver rationale.
          */
         create_restaurant: TxDescriptor<Anonymize<I53bq5kpov3oqq>>;
         /**
          * Register the caller as a rider.
+         *
+         * See [`Self::create_customer`] for the fee-waiver rationale.
          */
         create_rider: TxDescriptor<undefined>;
         /**

@@ -16,7 +16,7 @@ use frame::{
 pub type AccountId = u64;
 pub type Balance = u128;
 
-pub const INITIAL_BALANCE: Balance = 1_000_000_000_000;
+pub const INITIAL_BALANCE: Balance = 10_000;
 pub const DELIVERY_FEE: Balance = 500;
 
 #[frame_construct_runtime]
