@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useAccount, usePapiSigner } from "@luno-kit/react";
 import { Binary } from "polkadot-api";
+import { useActiveAccount } from "../hooks/useActiveAccount";
 import { stack_template } from "@polkadot-api/descriptors";
 import { useChainStore } from "../store/chainStore";
 import { useAccountRoles } from "../hooks/useAccountRoles";
@@ -20,8 +20,7 @@ import { requireUtf8MaxBytes } from "../utils/utf8Bounds";
 
 export default function HomePage() {
 	const { wsUrl, connected, pallets } = useChainStore();
-	const { address: walletAddress } = useAccount();
-	const { data: walletSigner, isLoading: signerLoading } = usePapiSigner();
+	const { address: walletAddress, signer: walletSigner, signerLoading } = useActiveAccount();
 	const [busyCustomer, setBusyCustomer] = useState(false);
 	const [busyRestaurant, setBusyRestaurant] = useState(false);
 	const [busyRider, setBusyRider] = useState(false);

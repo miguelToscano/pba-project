@@ -12,24 +12,7 @@ import {
 } from "polkadot-api/pjs-signer";
 import { injectSpektrExtension, SpektrExtensionName } from "@novasamatech/product-sdk";
 import { getSs58AddressInfo, Keccak256 } from "@polkadot-api/substrate-bindings";
-
-type HostEnvironment = "desktop-webview" | "web-iframe" | "standalone";
-
-function detectHostEnvironment(): HostEnvironment {
-	if (typeof window === "undefined") return "standalone";
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	if ((window as any).__HOST_WEBVIEW_MARK__) return "desktop-webview";
-	try {
-		if (window !== window.top) return "web-iframe";
-	} catch {
-		return "web-iframe";
-	}
-	return "standalone";
-}
-
-function isInHost(): boolean {
-	return detectHostEnvironment() !== "standalone";
-}
+import { isInHost } from "../utils/host";
 
 function ss58ToH160(ss58Address: string): `0x${string}` {
 	const info = getSs58AddressInfo(ss58Address);
