@@ -10,67 +10,67 @@
           "balances": [
             [
               "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
-              10000
+              1152921504606846976
             ],
             [
               "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
-              10000
+              1152921504606846976
             ],
             [
               "5FLSigC9HGRKVhB9FiEo4Y3koPsNmBmLJbpXg2mp1hXcS59Y",
-              10000
+              1152921504606846976
             ],
             [
               "5DAAnrj7VHTznn2AWBemMuyBwZWs6FNFjdyVXUeYum3PTXFy",
-              10000
+              1152921504606846976
             ],
             [
               "5HGjWAeFDfFCWPsjFQdVV2Msvz2XtMktvgocEZcCj68kUMaw",
-              10000
+              1152921504606846976
             ],
             [
               "5CiPPseXPECbkjWCa6MnjNokrgYjMqmKndv2rSnekmSK2DjL",
-              10000
+              1152921504606846976
             ],
             [
               "5GNJqTPyNqANBkUVMN1LPPrxXnFouWXoe2wNSmmEoLctxiZY",
-              10000
+              1152921504606846976
             ],
             [
               "5HpG9w8EBLe5XCrbczpwq5TSXvedjrBGCwqxK1iQ7qUsSWFc",
-              10000
+              1152921504606846976
             ],
             [
               "5Ck5SLSHYac6WFt5UZRSsdJjwmpSZq85fd5TRNAdZQVzEAPT",
-              10000
+              1152921504606846976
             ],
             [
               "5HKPmK9GYtE1PSLsS1qiYU9xQ9Si1NcEhdeCq9sw5bqu4ns8",
-              10000
+              1152921504606846976
             ],
             [
               "5FCfAonRZgTFrTd9HREEyeJjDpT397KMzizE6T3DvebLFE7n",
-              10000
+              1152921504606846976
             ],
             [
               "5CRmqmsiNFExV6VbdmPJViVxrWmkaXXvBrSX8oqBT8R9vmWk",
-              10000
+              1152921504606846976
             ],
             [
               "5HYRCKHYJN9z5xUtfFkyMj4JUhsAwWyvuU8vKB1FcnYTf9ZQ",
-              10000
+              1152921504606846976
             ],
             [
               "5DSSiJevXj8XQ6uKD5ZNQJEimLPWwxuW4MZE9YNcAtRsYgVG",
-              10000
+              1152921504606846976
             ],
             [
               "5Ep5dBwRE7mhFsH69SLRTSHYJ7yugeTycZHeT8Ez4DPACvqz",
-              10000
+              1152921504606846976
             ],
             [
               "5EYCAe5ijiYfyVem7asQ6SY1WEW8z7suV97c7ZAHuQYjhktj",
-              10000
+              1
             ]
           ]
         },
@@ -115,7 +115,7 @@
   "name": "Polkadot Stack Template",
   "para_id": 1000,
   "properties": {
-    "tokenDecimals": 0,
+    "tokenDecimals": 1,
     "tokenSymbol": "UNIT"
   },
   "protocolId": null,

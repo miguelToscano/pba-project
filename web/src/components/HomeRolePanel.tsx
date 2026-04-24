@@ -1837,18 +1837,24 @@ function RestaurantMenuModal({
 							>
 								<div className="flex justify-between text-sm text-text-secondary">
 									<span>Subtotal</span>
-									<span className="font-mono">{formatBalance(subtotal)} {TOKEN_SYMBOL}</span>
+									<span className="font-mono">
+										{formatBalance(subtotal)} {TOKEN_SYMBOL}
+									</span>
 								</div>
 								<div className="flex justify-between text-sm text-text-secondary">
 									<span>Delivery fee</span>
-									<span className="font-mono">{formatBalance(deliveryFee)} {TOKEN_SYMBOL}</span>
+									<span className="font-mono">
+										{formatBalance(deliveryFee)} {TOKEN_SYMBOL}
+									</span>
 								</div>
 								<div
 									className="pt-2 border-t flex justify-between font-semibold text-text-primary"
 									style={{ borderColor: "rgba(255,255,255,0.08)" }}
 								>
 									<span>Total</span>
-									<span className="font-mono">{formatBalance(total)} {TOKEN_SYMBOL}</span>
+									<span className="font-mono">
+										{formatBalance(total)} {TOKEN_SYMBOL}
+									</span>
 								</div>
 							</div>
 

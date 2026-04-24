@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from "react";
 import { distinctUntilChanged, filter, map } from "rxjs/operators";
 import { getClient, disconnectClient } from "./useChain";
 import { useChainStore } from "../store/chainStore";
+import { requestExternalPermission } from "../utils/hostPermissions";
 
 let stackTemplateDescriptorPromise: Promise<
 	(typeof import("@polkadot-api/descriptors"))["stack_template"]
@@ -34,6 +35,8 @@ export function useConnection() {
 			setPallets({ templatePallet: null });
 
 			disconnectClient();
+
+			await requestExternalPermission(url);
 
 			try {
 				const client = getClient(url);
